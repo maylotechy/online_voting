@@ -1,0 +1,18 @@
+body{
+    font-family: 'Satoshi', sans-serif;
+}
+
+/* Sidebar gradient background */
+.main-sidebar {
+    background: linear-gradient(to bottom, #00695c, #00bcd4);
+}
+
+/* Sidebar hover effect */
+.nav-sidebar .nav-link:hover {
+    background-color: #004d40;
+}
+
+/* Sidebar active link effect */
+.nav-sidebar .nav-link.active {
+    background-color: #004d40;
+}

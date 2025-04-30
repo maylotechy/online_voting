@@ -21,6 +21,9 @@ $studentCounts = [
     <link rel="stylesheet" href="../plugins/fontawesome-free/css/all.min.css">
     <link rel="stylesheet" href="../dist/css/adminlte.min.css">
     <link rel="stylesheet" href="../plugins/bootstrap/css/bootstrap.min.css">
+    <!-- Satoshi Font -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Satoshi:wght@400;600&display=swap">
+    <link rel="stylesheet" href="../custom_css/side-bar.css">
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
 <div class="wrapper">
@@ -51,7 +54,7 @@ $studentCounts = [
                     <li class="nav-item"><a href="dashboard.php" class="nav-link active">
                             <i class="nav-icon fas fa-tachometer-alt"></i><p>Dashboard</p></a></li>
 
-                    <li class="nav-item"><a href="admins.php" class="nav-link">
+                    <li class="nav-item"><a href="manage_admin.php" class="nav-link">
                             <i class="nav-icon fas fa-user-shield"></i><p>College Admins</p></a></li>
 
                     <li class="nav-item"><a href="templates.php" class="nav-link">
@@ -90,7 +93,7 @@ $studentCounts = [
             </div>
 
             <div class="col-md-3 col-sm-6">
-                <a href="admins.php" class="text-decoration-none">
+                <a href="manage_admin.php" class="text-decoration-none">
                     <div class="small-box bg-warning">
                         <div class="inner"><h3><?= $totalAdmins ?></h3><p>Total College Admins</p></div>
                         <div class="icon"><i class="fas fa-user-shield"></i></div>

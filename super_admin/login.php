@@ -9,38 +9,69 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Cloudflare Turnstile -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+    <!-- Google Fonts: Satoshi -->
+    <link href="https://fonts.googleapis.com/css2?family=Satoshi:wght@400;600&display=swap" rel="stylesheet">
+
     <style>
+        body {
+            font-family: 'Satoshi', sans-serif;
+        }
+
         .login-page {
-            background: url('../asssets/super_admin/bg.png') no-repeat fixed 100% center;
+            background: linear-gradient(135deg, #ffffff, #f0f0f0); /* White gradient */
             background-size: cover;
             min-height: 100vh;
             display: flex;
             align-items: center;
+        }
 
-        }
-        .login-logo {
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-        }
         .login-box {
             width: 400px;
         }
+
         .login-card {
             border-radius: 10px;
             box-shadow: 0 0 25px rgba(0,0,0,0.1);
             overflow: hidden;
+            height: auto;
         }
+
+        .login-card-header {
+            background: linear-gradient(45deg, #008080, #20c997);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: none;
+        }
+
         .login-card-body {
             padding: 2rem;
         }
+
+        .admin-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 0;
+        }
+
+        .admin-title i {
+            margin-right: 10px;
+            font-size: 1.5rem;
+        }
+
         .cf-turnstile {
             width: 100% !important;
-            margin: 15px 15px;
+            margin: 15px 0;
         }
-        /* Match AdminLTE input height */
+
         .cf-turnstile iframe {
             height: 38px !important;
         }
+
         .btn-teal {
             background-color: teal;
             border-color: teal;
@@ -51,26 +82,45 @@
             background-color: #007777;
             border-color: #006666;
         }
-        .gradient-text {
-            background: linear-gradient(45deg, #008080, #20c997); /* teal gradient */
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: bold;
+
+        .logo {
+            text-align: center;
+            margin-bottom: 1rem;
         }
 
+        .university-title {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
 
     </style>
 </head>
 <body class="login-page">
 <div class="login-box">
-    <!-- Login Logo -->
-    <div class="login-logo text-center mb-4">
-        <a href="#" class="gradient-text"><b>SUPER</b>admin</a>
-    </div>
-
     <!-- Login Card -->
     <div class="card login-card">
+        <!-- Card Header with Super Admin Title -->
+        <div class="card-header login-card-header">
+            <h3 class="admin-title">
+                <i class="fas fa-user-shield"></i>
+                SUPER ADMIN
+            </h3>
+        </div>
+
         <div class="card-body login-card-body">
+            <!-- University Name -->
+            <div class="university-title">
+                UNIVERSITY OF SOUTHERN MINDANAO
+            </div>
+
+            <!-- Logo -->
+            <div class="logo">
+                <img src="../asssets/super_admin/login-removebg-preview.png" alt="University Logo" style="width: 100px; height: auto;">
+            </div>
+
             <p class="login-box-msg">Sign in to start your session</p>
 
             <form id="loginForm">

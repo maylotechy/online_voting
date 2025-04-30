@@ -2,26 +2,92 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Voting Portal</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
+    <title>Student Login | AdminLTE</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Cloudflare Turnstile -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Satoshi:wght@400;600&display=swap" rel="stylesheet">
+
     <style>
         body {
-            background-color: #f8f9fa;
-            height: 100vh;
+            font-family: 'Satoshi', sans-serif;
+        }
+
+        .login-page {
+            background: linear-gradient(135deg, #ffffff, #f0f0f0);
+            background-size: cover;
+            min-height: 100vh;
             display: flex;
             align-items: center;
         }
-        .voting-card {
-            max-width: 450px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            border-top: 5px solid #20c997;
+
+        .login-box {
+            width: 400px;
+        }
+
+        .login-card {
+            border-radius: 10px;
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .login-card-header {
+            background: linear-gradient(45deg, #008080, #20c997);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: none;
+        }
+
+        .admin-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 0;
+        }
+
+        .admin-title i {
+            margin-right: 10px;
+            font-size: 1.5rem;
+        }
+
+        .login-card-body {
+            padding: 2rem;
+        }
+
+        .university-title {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .btn-teal {
+            background-color: teal;
+            border-color: teal;
+            color: #fff;
+        }
+
+        .btn-teal:hover {
+            background-color: #007777;
+            border-color: #006666;
+        }
+
+        .cf-turnstile {
+            width: 100% !important;
+            margin: 15px 15px;
+        }
+
+        .cf-turnstile iframe {
+            height: 38px !important;
         }
         .code-input {
             display: flex;
@@ -30,10 +96,10 @@
             margin: 15px 0;
         }
         .code-input input {
-            width: 50px;
-            height: 60px;
+            width: 45px;
+            height: 55px;
             text-align: center;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: bold;
             border: 2px solid #ced4da;
             border-radius: 6px;
@@ -45,150 +111,158 @@
         .btn-teal {
             background-color: #20c997;
             border-color: #20c997;
+            color: white;
         }
         .btn-teal:hover {
             background-color: #1aa179;
             border-color: #1aa179;
         }
-        .turnstile-container {
-            margin: 15px 0;
-        }
-        .form-label {
-            font-weight: 500;
-        }
     </style>
 </head>
-<body>
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-10 col-lg-8">
-            <div class="card voting-card">
-                <div class="card-body p-4 p-md-5">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-vote-yea fa-3x text-teal mb-3" style="color: #20c997;"></i>
-                        <h2>Student Voting Portal</h2>
-                        <p class="text-muted">Enter your student ID and access code</p>
+<body class="login-page">
+<div class="login-box">
+    <div class="card login-card">
+        <div class="card-header login-card-header">
+            <h3 class="admin-title">
+                <i class="fas fa-user-graduate"></i>
+                STUDENT
+            </h3>
+        </div>
+
+        <div class="card-body login-card-body">
+            <div class="university-title">
+                UNIVERSITY OF SOUTHERN MINDANAO
+            </div>
+
+            <div class="logo">
+                <img src="../asssets/super_admin/login-removebg-preview.png" alt="Student Logo" style="width: 100px; height: auto;">
+            </div>
+
+            <p class="login-box-msg">Sign in using your student credentials</p>
+
+            <form id="loginForm">
+                <label class="form-label">Student id</label>
+                <div class="input-group mb-3">
+                    <input type="text" name="student_id" class="form-control" placeholder="Student ID" required>
+                    <div class="input-group-append">
+                        <div class="input-group-text">
+                            <span class="fas fa-id-card"></span>
+                        </div>
                     </div>
-
-                    <form id="votingLoginForm">
-                        <!-- Student ID Field -->
-                        <div class="mb-3">
-                            <label for="studentId" class="form-label">Student ID</label>
-                            <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i class="fas fa-id-card"></i>
-                                    </span>
-                                <input type="text" class="form-control" id="studentId"
-                                       name="student_id" placeholder="e.g. 20230001" required>
-                            </div>
-                        </div>
-
-                        <!-- 4-Digit Access Code -->
-                        <div class="mb-3">
-                            <label class="form-label">6-Digit Access Code</label>
-                            <div class="code-input">
-                                <input type="text" maxlength="1" class="form-control"
-                                       pattern="\d" required name="code1">
-                                <input type="text" maxlength="1" class="form-control"
-                                       pattern="\d" required name="code2">
-                                <input type="text" maxlength="1" class="form-control"
-                                       pattern="\d" required name="code3">
-                                <input type="text" maxlength="1" class="form-control"
-                                       pattern="\d" required name="code4">
-                                <input type="text" maxlength="1" class="form-control"
-                                       pattern="\d" required name="code5">
-                                <input type="text" maxlength="1" class="form-control"
-                                       pattern="\d" required name="code6">
-                            </div>
-                            <input type="hidden" id="accessCode" name="access_code">
-                        </div>
-
-                        <!-- Cloudflare Turnstile -->
-                        <div class="turnstile-container text-center">
-                            <div class="cf-turnstile"
-                                 data-sitekey="0x4AAAAAABXBqVxZ77CX3Fs3"
-                                 data-theme="light"
-                                 data-size="normal"></div>
-                        </div>
-
-                        <!-- Submit Button -->
-                        <button type="submit" class="btn btn-teal btn-lg w-100 py-2 mt-3">
-                            <i class="fas fa-sign-in-alt me-2"></i> Enter Voting Booth
-                        </button>
-                    </form>
                 </div>
+
+                <div class="mb-3">
+                    <label class="form-label">6-Digit Access Code</label>
+                    <div class="code-input">
+                        <input type="text" maxlength="1" class="form-control" pattern="\d" required name="code1">
+                        <input type="text" maxlength="1" class="form-control" pattern="\d" required name="code2">
+                        <input type="text" maxlength="1" class="form-control" pattern="\d" required name="code3">
+                        <input type="text" maxlength="1" class="form-control" pattern="\d" required name="code4">
+                        <input type="text" maxlength="1" class="form-control" pattern="\d" required name="code5">
+                        <input type="text" maxlength="1" class="form-control" pattern="\d" required name="code6">
+                    </div>
+                    <input type="hidden" id="accessCode" name="access_code">
+                </div>
+
+
+
+                <!-- Turnstile -->
+                <div class="cf-turnstile mb-3"
+                     data-sitekey="0x4AAAAAABXBqVxZ77CX3Fs3"
+                     data-theme="light"
+                     data-size="normal"></div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-teal btn-block">
+                            <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="mt-4 text-center">
+                <small class="text-muted">
+                    <i class="fas fa-shield-alt mr-1"></i> Secured by Cloudflare Turnstile
+                </small>
             </div>
         </div>
     </div>
 </div>
-
-<!-- Bootstrap 5 JS Bundle with Popper -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
 <script>
-    $(document).ready(function() {
-        // Auto-focus between code inputs
-        $('.code-input input').keyup(function(e) {
-            // Only allow numbers
-            if (e.which != 8 && e.which != 0 && (e.which < 48 || e.which > 57)) {
+    $(document).ready(function () {
+        $('.code-input input').keyup(function (e) {
+            if (e.which !== 8 && (e.which < 48 || e.which > 57)) {
                 $(this).val('');
                 return false;
             }
-
             if (this.value.length === this.maxLength) {
                 $(this).next('.code-input input').focus();
             }
         });
 
-        // Combine code digits before submission
-        $('#votingLoginForm').submit(function(e) {
+        $('#votingLoginForm').submit(function (e) {
             e.preventDefault();
 
-            // Combine the 4-digit code
             let accessCode = '';
-            $('.code-input input').each(function() {
+            $('.code-input input').each(function () {
                 accessCode += $(this).val();
             });
             $('#accessCode').val(accessCode);
 
-            // Validate code length
-            if (accessCode.length !== 4) {
-                alert('Please enter a complete 4-digit access code');
+            if (accessCode.length !== 6) {
+                alert('Please enter a complete 6-digit access code');
                 return;
             }
 
-            // Show loading state
-            const btn = $(this).find('button[type="submit"]');
-            btn.prop('disabled', true)
-                .html('<span class="spinner-border spinner-border-sm me-2"></span> Verifying...');
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-            // Submit via AJAX
-            $.ajax({
-                type: 'POST',
-                url: 'voting_login.php',
-                data: $(this).serialize(),
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        window.location.href = response.redirect || 'voting_booth.php';
-                    } else {
-                        alert(response.message || 'Login failed. Please check your credentials.');
-                        // Reset Turnstile
-                        if (typeof turnstile !== 'undefined') {
-                            turnstile.reset();
-                        }
-                    }
-                    btn.prop('disabled', false)
-                        .html('<i class="fas fa-sign-in-alt me-2"></i> Enter Voting Booth');
-                },
-                error: function() {
-                    alert('Connection error. Please try again.');
-                    btn.prop('disabled', false)
-                        .html('<i class="fas fa-sign-in-alt me-2"></i> Enter Voting Booth');
+<script>
+    $('#loginForm').submit(function(e) {
+        e.preventDefault();
+        const btn = $(this).find('button[type="submit"]');
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Authenticating...');
+
+        $.ajax({
+            type: 'POST',
+            url: 'student_login_process.php',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        title: 'Success',
+                        text: response.message,
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.href = "student_dashboard.php";
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Failed',
+                        text: response.message,
+                        icon: 'error'
+                    });
+                    if (typeof turnstile !== 'undefined') turnstile.reset();
                 }
-            });
+                btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Sign In');
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: xhr.responseJSON?.message || 'Connection error. Please try again.',
+                    confirmButtonColor: '#3085d6',
+                });
+                btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Sign In');
+                if (typeof turnstile !== 'undefined') turnstile.reset();
+            }
         });
     });
 </script>

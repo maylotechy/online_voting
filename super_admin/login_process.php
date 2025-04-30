@@ -73,7 +73,7 @@ try {
     $password = $_POST["password"];
     $role_id = 1; // Super Admin role
 
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE email = :email AND role_id = :role_id");
+    $stmt = $pdo->prepare("SELECT * FROM admins WHERE email = :email AND role_id = :role_id");
     $stmt->bindParam(":email", $email);
     $stmt->bindParam(":role_id", $role_id);
 
