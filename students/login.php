@@ -85,7 +85,7 @@
 
                         <!-- 4-Digit Access Code -->
                         <div class="mb-3">
-                            <label class="form-label">4-Digit Access Code</label>
+                            <label class="form-label">6-Digit Access Code</label>
                             <div class="code-input">
                                 <input type="text" maxlength="1" class="form-control"
                                        pattern="\d" required name="code1">
@@ -95,6 +95,10 @@
                                        pattern="\d" required name="code3">
                                 <input type="text" maxlength="1" class="form-control"
                                        pattern="\d" required name="code4">
+                                <input type="text" maxlength="1" class="form-control"
+                                       pattern="\d" required name="code5">
+                                <input type="text" maxlength="1" class="form-control"
+                                       pattern="\d" required name="code6">
                             </div>
                             <input type="hidden" id="accessCode" name="access_code">
                         </div>
