@@ -1,0 +1,5 @@
+RewriteEngine On
+RewriteBase /usm-online-voting/
+
+# Remove the .php extension
+RewriteRule ^super_admin/login$ super_admin/login.php [L]
