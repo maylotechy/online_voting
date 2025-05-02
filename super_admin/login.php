@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Toastr CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <!-- Cloudflare Turnstile -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
@@ -176,10 +178,19 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
 <!-- AdminLTE -->
 <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
-<!-- SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Toastr JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
 <script>
+    // Toastr configuration
+    toastr.options = {
+        closeButton: true,
+        progressBar: true,
+        positionClass: 'toast-top-right',
+        timeOut: 5000,
+        escapeHtml: true
+    };
+
     // Handle form submission
     $('#loginForm').submit(function(e) {
         e.preventDefault();
@@ -196,22 +207,12 @@
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    Swal.fire({
-                        title: 'Success',
-                        text: response.message,
-                        icon: 'success',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
+                    toastr.success(response.message);
+                    setTimeout(() => {
                         window.location.href = "dashboard.php";
-                    });
+                    }, 1500);
                 } else {
-                    Swal.fire({
-                        title: 'Failed',
-                        text: response.message,
-                        icon: 'error'
-                    });
-
+                    toastr.error(response.message);
                     // Reset Turnstile if available
                     if (typeof turnstile !== 'undefined') {
                         turnstile.reset();
@@ -220,12 +221,7 @@
                 btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Sign In');
             },
             error: function(xhr) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: xhr.responseJSON?.message || 'Connection error. Please try again.',
-                    confirmButtonColor: '#3085d6',
-                });
+                toastr.error(xhr.responseJSON?.message || 'Connection error. Please try again.');
                 btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Sign In');
 
                 // Reset Turnstile if available

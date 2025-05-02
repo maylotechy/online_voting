@@ -71,11 +71,10 @@ try {
 
     $email = trim($_POST["email"]);
     $password = $_POST["password"];
-    $role_id = 1; // Super Admin role
 
-    $stmt = $pdo->prepare("SELECT * FROM admins WHERE email = :email AND role_id = :role_id");
+    // Modified query to check for either admin role (1 = super admin, 2 = college admin)
+    $stmt = $pdo->prepare("SELECT * FROM admins WHERE email = :email AND role_id IN (1, 2)");
     $stmt->bindParam(":email", $email);
-    $stmt->bindParam(":role_id", $role_id);
 
     if (!$stmt->execute()) {
         throw new Exception('Database error', 500);
@@ -93,20 +92,35 @@ try {
         throw new Exception('Invalid username/email or password', 401);
     }
 
-    // Successful login
+    // Successful login - store all relevant session data
     $_SESSION['admin_id'] = $row['id'];
+    $_SESSION['email'] = $row['email'];
+    $_SESSION['role_id'] = $row['role_id']; // Store the role_id
+    $_SESSION['college_id'] = $row['college_id'] ?? null; // Store college_id if exists
+
+    // Regenerate session ID for security
     session_regenerate_id(true);
+
+    // Log successful attempt
     logLoginAttempt($pdo, $row['id'], $email, 'success', $row['role_id']);
+
+    // Determine redirect based on role
+    $redirect = match((int)$row['role_id']) {
+        1 => 'super_admin/dashboard.php', // Super admin
+        2 => 'college_admin/dashboard.php', // College admin
+        default => 'login.php' // Shouldn't happen due to query filter
+    };
 
     echo json_encode([
         'success' => true,
         'response' => 'success',
         'message' => 'Successfully logged in',
-        'redirect' => 'user-homepage.php' // Add redirect URL
+        'redirect' => $redirect,
+        'role_id' => $row['role_id'] // Optional: send role info to frontend
     ]);
 
 } catch (Exception $e) {
-    http_response_code($e->getCode());
+    http_response_code($e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500);
     echo json_encode([
         'success' => false,
         'response' => 'error',
