@@ -119,6 +119,12 @@ if (isset($_GET['success'])) {
                             <p>Candidates</p>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="students.php" class="nav-link">
+                            <i class="nav-icon fas fa-user"></i>
+                            <p>Students</p>
+                        </a>
+                    </li>
 
 
 
@@ -142,7 +148,7 @@ if (isset($_GET['success'])) {
         <h2>Manage College Admins</h2>
 
         <button class="btn btn-success mb-3" data-toggle="modal" data-target="#addAdminModal">
-            <i class="fas fa-plus-circle"></i> Add Admin
+            <i class="fas fa-user-plus mr-2"></i> Add Admin
         </button>
 
         <div class="card">

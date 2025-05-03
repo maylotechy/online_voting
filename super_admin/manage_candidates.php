@@ -79,6 +79,26 @@ try {
     $colleges = getColleges($pdo);
     $positions = getPositions($pdo);
     $candidates = getCandidates($pdo);
+
+    // Calculate candidate counts
+    $total_candidates = count($candidates);
+    $active_candidates = 0;
+    $pending_candidates = 0;
+    $archived_candidates = 0;
+
+    foreach ($candidates as $candidate) {
+        switch ($candidate['status']) {
+            case 'active':
+                $active_candidates++;
+                break;
+            case 'pending':
+                $pending_candidates++;
+                break;
+            case 'archived':
+                $archived_candidates++;
+                break;
+        }
+    }
 } catch (PDOException $e) {
     die("Database error: " . $e->getMessage());
 }
@@ -106,7 +126,6 @@ try {
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="../plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
     <style>
-        /* Modern Modal Styles */
         .modern-modal .modal-content {
             border: none;
             border-radius: 4px;
@@ -186,41 +205,79 @@ try {
         .modern-modal .close:hover {
             opacity: 0.8;
         }
-        /* Add spacing around the filter and search elements */
-        .card-header {
-            padding: 1rem 1.25rem !important;
+
+        /* New table controls styling */
+        .table-controls {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* Style for the search input container */
-        .dataTables_filter {
-            margin-bottom: 1rem;
-        }
-
-        /* Style for the search input itself */
-        .dataTables_filter input {
-            margin-left: 0.5rem;
-            padding: 0.375rem 0.75rem;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
             border-radius: 0.25rem;
-            border: 1px solid #ced4da;
         }
 
-        /* Spacing for the filter dropdown */
-        .form-inline {
-            margin-bottom: 1rem;
+        .filter-controls, .search-control {
+            flex: 1;
+            min-width: 250px;
         }
 
-        .dataTables_wrapper .dataTables_paginate {
-            padding-top: 1rem;
-            margin-top: 1rem;
-            border-top: 1px solid #dee2e6;
+        /* Hide the default DataTables search */
+        .dataTables_filter {
+            display: none;
         }
 
-        .dataTables_wrapper .dataTables_info {
-            padding-top: 1rem;
+        /* Filter dropdown styling */
+        #statusFilter {
+            width: 100%;
+            display: block;
+            margin-top: 5px;
         }
+
+        /* Search input styling */
+        #searchInput {
+            width: 100%;
+            display: block;
+            margin-top: 5px;
+        }
+
+        /* Table header styling */
+        #candidatesTable thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            z-index: 10;
+            padding: 0.75rem;
+            vertical-align: middle;
+            border-bottom-width: 2px;
+        }
+
+        /* Table body styling */
+        #candidatesTable tbody td {
+            padding: 0.75rem;
+            vertical-align: middle;
+        }
+
+        /* Custom pagination styling */
+        .dataTables_paginate .paginate_button {
+            color: #333 !important;
+            background-color: #fff !important;
+            border: 1px solid #dee2e6 !important;
+            margin: 0 2px;
+        }
+
+        .dataTables_paginate .paginate_button.current {
+            background-color: #007bff !important;
+            border-color: #007bff !important;
+            color: white !important;
+        }
+
+        .dataTables_paginate .paginate_button:hover {
+            background-color: #e9ecef !important;
+        }
+
+
+
 
     </style>
 </head>
@@ -257,9 +314,15 @@ try {
                             <i class="nav-icon fas fa-user-shield"></i><p>College Admins</p></a></li>
 
                     <li class="nav-item">
-                        <a href="manage_candidates.php" class="nav-link">
+                        <a href="manage_candidates.php" class="nav-link active">
                             <i class="nav-icon fas fa-users"></i>
                             <p>Candidates</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="students.php" class="nav-link">
+                            <i class="nav-icon fas fa-user"></i>
+                            <p>Students</p>
                         </a>
                     </li>
                     <li class="nav-item"><a href="create_elections.php" class="nav-link">
@@ -281,21 +344,55 @@ try {
     <div class="content-wrapper p-4">
         <h2>Manage Candidates</h2>
         <button class="btn btn-success mb-3" data-toggle="modal" data-target="#addCandidateModal">
-            <i class="fas fa-plus-circle"></i> Add Candidates
+            <i class="fas fa-user-plus mr-2"></i> Add Candidates
         </button>
-        <div class="form-inline">
-            <label for="statusFilter" class="mr-2">Filter by Status:</label>
-            <select class="form-control" id="statusFilter">
-                <option value="all">All Statuses</option>
-                <option value="active">active</option>
-                <option value="pending">pending</option>
-                <option value="inactive">inactive</option>
-            </select>
+
+        <!-- Summary Cards -->
+        <div class="row mt-3">
+            <div class="col-md-3 col-sm-6">
+                <div class="small-box bg-info">
+                    <div class="inner"><h3><?=  $total_candidates ?></h3><p>Total Candidates</p></div>
+                    <div class="icon"><i class="fas fa-users"></i></div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="small-box bg-success">
+                    <div class="inner"><h3><?= $active_candidates ?></h3><p>Active</p></div>
+                    <div class="icon"><i class="fas fa-user-astronaut"></i></div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="small-box bg-warning">
+                    <div class="inner"><h3><?= $pending_candidates ?></h3><p>Pending</p></div>
+                    <div class="icon"><i class="fas fa-hourglass-half"></i></div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="small-box bg-danger">
+                    <div class="inner"><h3><?= $archived_candidates ?></h3><p>Archived</p></div>
+                    <div class="icon"><i class="fas fa-folder"></i></div>
+                </div>
+            </div>
         </div>
+
 
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">List of Candidates</h3>
+                <div class="table-controls">
+                    <div class="filter-controls">
+                        <label for="statusFilter">Filter by Status:</label>
+                        <select class="form-control" id="statusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="active">Active</option>
+                            <option value="pending">Pending</option>
+                            <option value="archived">Archived</option>
+                        </select>
+                    </div>
+                    <div class="search-control">
+                        <label for="searchInput">Search:</label>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search candidates...">
+                    </div>
+                </div>
             </div>
             <div class="card-body table-responsive p-0">
                 <table id="candidatesTable" class="table table-bordered table-hover">
@@ -324,29 +421,32 @@ try {
                                 <td><?= htmlspecialchars($candidate['platform']) ?></td>
                                 <td><?= htmlspecialchars($candidate['party_list']) ?></td>
                                 <td>
-                                    <button class="btn btn-warning btn-sm edit-btn"
-                                            data-id="<?= $candidate['candidate_id'] ?>"
-                                            data-student-id="<?= $candidate['student_id'] ?>"
-                                            data-first-name="<?= htmlspecialchars($candidate['first_name']) ?>"
-                                            data-last-name="<?= htmlspecialchars($candidate['last_name']) ?>"
-                                            data-email="<?= htmlspecialchars($candidate['email']) ?>"
-                                            data-college-id="<?= $candidate['college_id'] ?>"
-                                            data-college-name="<?= htmlspecialchars($candidate['college_name']) ?>"
-                                            data-course-id="<?= $candidate['course_id'] ?>"
-                                            data-course-name="<?= htmlspecialchars($candidate['course_name']) ?>"
-                                            data-position-id="<?= $candidate['position_id'] ?>"
-                                            data-position-name="<?= htmlspecialchars($candidate['position_name']) ?>"
-                                            data-platform="<?= htmlspecialchars($candidate['platform']) ?>"
-                                            data-party-list="<?= htmlspecialchars($candidate['party_list']) ?>"
-                                            data-status="<?= htmlspecialchars($candidate['status']) ?>">
-                                        <i class="fas fa-edit"></i></button>
-
-                                    <button class="btn btn-danger btn-sm delete-btn"
-                                            data-id="<?= $candidate['candidate_id'] ?>"
-                                            data-first-name="<?= htmlspecialchars($candidate['first_name']) ?>"
-                                            data-last-name="<?= htmlspecialchars($candidate['last_name']) ?>">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <?php if ($candidate['status'] === 'archived'): ?>
+                                        <button class="btn btn-danger btn-sm delete-btn"
+                                                data-id="<?= $candidate['candidate_id'] ?>"
+                                                data-first-name="<?= htmlspecialchars($candidate['first_name']) ?>"
+                                                data-last-name="<?= htmlspecialchars($candidate['last_name']) ?>">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    <?php else: ?>
+                                        <button class="btn btn-warning btn-sm edit-btn"
+                                                data-id="<?= $candidate['candidate_id'] ?>"
+                                                data-student-id="<?= $candidate['student_id'] ?>"
+                                                data-first-name="<?= htmlspecialchars($candidate['first_name']) ?>"
+                                                data-last-name="<?= htmlspecialchars($candidate['last_name']) ?>"
+                                                data-email="<?= htmlspecialchars($candidate['email']) ?>"
+                                                data-college-id="<?= $candidate['college_id'] ?>"
+                                                data-college-name="<?= htmlspecialchars($candidate['college_name']) ?>"
+                                                data-course-id="<?= $candidate['course_id'] ?>"
+                                                data-course-name="<?= htmlspecialchars($candidate['course_name']) ?>"
+                                                data-position-id="<?= $candidate['position_id'] ?>"
+                                                data-position-name="<?= htmlspecialchars($candidate['position_name']) ?>"
+                                                data-platform="<?= htmlspecialchars($candidate['platform']) ?>"
+                                                data-party-list="<?= htmlspecialchars($candidate['party_list']) ?>"
+                                                data-status="<?= htmlspecialchars($candidate['status']) ?>">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <?php
@@ -358,9 +458,9 @@ try {
                                             $color = '#28a745'; // green
                                             break;
                                         case 'pending':
-                                            $color = '#ffff00'; // yellow
+                                            $color = '#ffc107'; // yellow
                                             break;
-                                        case 'inactive':
+                                        case 'archived':
                                             $color = '#dc3545'; // red
                                             break;
                                     }
@@ -374,10 +474,8 @@ try {
                                             margin-right: 5px;
                                             "></span>
                                     <span><?= strtolower($status) ?></span>
-
                                 </td>
                             </tr>
-
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
@@ -385,7 +483,6 @@ try {
                         </tr>
                     <?php endif; ?>
                     </tbody>
-
                 </table>
             </div>
         </div>
@@ -479,7 +576,7 @@ try {
 <div class="modal fade modern-modal" id="editCandidateModal" tabindex="-1" role="dialog" aria-labelledby="editCandidateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <form id="editCandidateForm" action="process_edit_candidate.php" method="POST">
+            <form id="editCandidateForm" action="edit_candidate.php" method="POST">
                 <div class="modal-header">
                     <h5 class="modal-title" id="editCandidateModalLabel">
                         <i class="fas fa-user-edit mr-2"></i>Edit Candidate
@@ -547,11 +644,11 @@ try {
                             </div>
 
                             <div class="form-group">
-                                <label for="editStatus"><i class="fas fa-chart-line mr-1"></i>Status</label>
+                                <label for="editStatus"><i class="fas fa-chart-line mr-1"></i>Status <small class="text-danger">(Changing to archived cannot be reverted)</small></label>
                                 <select class="form-control" id="editStatus" name="status" required>
                                     <option value="active">Active</option>
                                     <option value="pending">Pending</option>
-                                    <option value="inactive">Inactive</option>
+                                    <option value="archived">Archived</option>
                                 </select>
                             </div>
                         </div>
@@ -573,7 +670,7 @@ try {
 <div class="modal fade modern-modal" id="deleteCandidateModal" tabindex="-1" role="dialog" aria-labelledby="deleteCandidateModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <form id="deleteCandidateForm" action="process_delete_candidate.php" method="POST">
+            <form id="deleteCandidateForm" action="delete_candidate.php" method="POST">
                 <div class="modal-header">
                     <h5 class="modal-title" id="deleteCandidateModalLabel">
                         <i class="fas fa-trash-alt mr-2"></i>Confirm Delete
@@ -621,37 +718,59 @@ try {
             timeOut: 5000
         };
 
-        // Initialize DataTable
+        // Initialize DataTable with your original configuration
         var table = $('#candidatesTable').DataTable({
             "paging": true,
             "lengthChange": false,
             "searching": true,
-            "ordering": true,
-            "info": true,
+            "ordering": false,
+            "info": false,
             "autoWidth": false,
             "responsive": true,
+            "pageLength": 10,
+            "language": {
+                "paginate": {
+                    "previous": "<i class='fas fa-angle-left'></i>",
+                    "next": "<i class='fas fa-angle-right'></i>",
+                    "first": "<i class='fas fa-angle-double-left'></i>",
+                    "last": "<i class='fas fa-angle-double-right'></i>"
+                },
+                "info": "Showing _START_ to _END_ of _TOTAL_ candidates",
+                "infoEmpty": "No candidates found",
+                "infoFiltered": "(filtered from _MAX_ total candidates)",
+                "search": "",
+                "searchPlaceholder": "Search candidates..."
+            },
             "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
                 "<'row'<'col-sm-12'tr>>" +
                 "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
             "columnDefs": [
                 { "orderable": false, "targets": [7] } // Disable sorting for Actions column
-            ]
-        });
-
-        // Status filter functionality
-        $('#statusFilter').change(function() {
-            var status = $(this).val();
-            if (status === 'all') {
-                table.columns(8).search('').draw();
-            } else {
-                table.columns(8).search('^' + status + '$', true, false, true).draw();
+            ],
+            "drawCallback": function(settings) {
+                // Add custom classes after each draw
+                $('.paginate_button').addClass('btn btn-sm btn-outline-secondary');
+                $('.paginate_button.current').removeClass('btn-outline-secondary')
+                    .addClass('btn-primary');
             }
         });
 
+        // Custom search input functionality
+        $('#searchInput').on('keyup', function() {
+            table.search(this.value).draw();
+        });
 
-        // Search functionality (using DataTables built-in search)
-        $('#searchInput').keyup(function(){
-            table.search($(this).val()).draw();
+        // Status filter functionality (your original logic)
+        $('#statusFilter').on('change', function() {
+            var val = $(this).val();
+
+            // Special handling for empty value (All Statuses)
+            if (val === '') {
+                table.column(8).search('').draw();
+            } else {
+                // Filter the status column with case-insensitive exact match
+                table.column(8).search(val, false, false).draw();
+            }
         });
 
         // Edit button click handler
@@ -667,11 +786,6 @@ try {
             var partyList = $(this).data('party-list');
             var status = $(this).data('status');
 
-            // Check if status is "inactive" and prevent editing
-            if (status === 'inactive') {
-                toastr.error('You cannot edit a candidate with status "Inactive"');
-                return; // Stop execution and don't show the modal
-            }
 
             // Set values in the form fields
             $('#editCandidateId').val(id);
@@ -688,6 +802,7 @@ try {
             $('#editCandidateModal').modal('show');
         });
 
+
         // Delete candidate button click
         $('.delete-btn').click(function() {
             var candidateId = $(this).data('id');
@@ -703,74 +818,146 @@ try {
             $('#deleteCandidateModal').modal('show');
         });
 
-        // Form submission handler for edit candidate
-        $('#editCandidateForm').submit(function(e) {
-            e.preventDefault();
 
+        // Form submission handler for edit candidate
+        $('#editCandidateForm').on('submit', function(e) {
+            e.preventDefault();
+            const form = $(this);
+            const submitBtn = form.find('[type="submit"]');
+            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
             $.ajax({
-                url: $(this).attr('action'),
                 type: 'POST',
-                data: $(this).serialize(),
+                url: form.attr('action'),
+                data: form.serialize(),
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
                         toastr.success(response.message);
                         $('#editCandidateModal').modal('hide');
-                        location.reload();
+                        setTimeout(() => location.reload(), 1500);
                     } else {
-                        toastr.error(response.message || 'Failed to update candidate');
+                        toastr.error(response.message);
                     }
                 },
-                error: function() {
-                    toastr.error('Error updating candidate');
+                error: function(xhr) {
+                    let errorMsg = 'Failed to update candidate';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMsg = response.message || errorMsg;
+                    } catch (e) {
+                        errorMsg = xhr.responseText || errorMsg;
+                    }
+                    toastr.error(errorMsg);
+                },
+                complete: function() {
+                    submitBtn.prop('disabled', false).html('Save Changes');
                 }
             });
         });
+        // Reset forms when modals are closed
+        $('#editCandidateModal').on('hidden.bs.modal', function() {
+            $('#editCandidateForm')[0].reset();
+        });
 
-        // Delete form submission
-        $('#deleteCandidateForm').submit(function(e) {
-            e.preventDefault();
 
-            $.ajax({
-                url: 'process_delete_candidate.php',
-                type: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        toastr.success(response.message || 'Candidate deleted successfully');
-                        $('#deleteCandidateModal').modal('hide');
-                        location.reload();
-                    } else {
-                        toastr.error(response.message || 'Failed to delete the candidate');
+        $(document).ready(function() {
+            // Delete button click handler - shows modal
+            $(document).on('click', '.delete-btn', function() {
+                const candidateId = $(this).data('id');
+                const candidateName = $(this).data('full-name');
+
+                $('#deleteCandidateId').val(candidateId);
+                $('#deleteCandidateName').text(candidateName);
+                $('#deleteCandidateModal').modal('show');
+            });
+
+            // Form submission handler
+            $('#deleteCandidateForm').on('submit', function(e) {
+                e.preventDefault();
+
+                const form = $(this);
+                const submitBtn = form.find('[type="submit"]');
+                const cancelBtn = form.find('[data-dismiss="modal"]');
+
+                // Disable buttons and show loading state
+                submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Deleting...');
+                cancelBtn.prop('disabled', true);
+
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: form.serialize(),
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            // Show success message
+                            toastr.success(response.message);
+
+                            // Close modal
+                            $('#deleteCandidateModal').modal('hide');
+
+                            // Refresh page after 1 second
+                            setTimeout(function() {
+                                location.reload();
+                            }, 1000);
+                        } else {
+                            // Show error message
+                            toastr.error(response.message || 'Failed to delete candidate');
+
+                            // Reset buttons
+                            submitBtn.prop('disabled', false).html('<i class="fas fa-trash-alt mr-1"></i> Delete');
+                            cancelBtn.prop('disabled', false);
+                        }
+                    },
+                    error: function(xhr) {
+                        // Parse error response
+                        let errorMessage = 'An error occurred while deleting the candidate';
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.message) {
+                                errorMessage = response.message;
+                            }
+                        } catch (e) {
+                            errorMessage = xhr.statusText || errorMessage;
+                        }
+
+                        // Show error
+                        toastr.error(errorMessage);
+
+                        // Reset buttons
+                        submitBtn.prop('disabled', false).html('<i class="fas fa-trash-alt mr-1"></i> Delete');
+                        cancelBtn.prop('disabled', false);
                     }
-                },
-                error: function() {
-                    toastr.error('Error deleting candidate');
-                }
+                });
+            });
+
+            // Reset form when modal is closed
+            $('#deleteCandidateModal').on('hidden.bs.modal', function() {
+                $('#deleteCandidateForm')[0].reset();
+                const submitBtn = $('#deleteCandidateForm').find('[type="submit"]');
+                const cancelBtn = $('#deleteCandidateForm').find('[data-dismiss="modal"]');
+                submitBtn.prop('disabled', false).html('<i class="fas fa-trash-alt mr-1"></i> Delete');
+                cancelBtn.prop('disabled', false);
             });
         });
 
         // Add Candidate form submission
         $('#candidateForm').on('submit', function(e) {
             e.preventDefault();
-
             var formData = $(this).serialize();
-
             if ($('#student_id').val() === '' || $('#position_id').val() === '' ||
                 $('#platform').val() === '' || $('#party_list').val() === '' || $('#status').val() === '') {
                 toastr.error('All fields are required.');
                 return;
             }
-
+            // Fixed: Using $(this) instead of undefined 'form' variable
+            const submitBtn = $(this).find('[type="submit"]');
+            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
             $.ajax({
                 url: 'add_candidate.php',
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
-                beforeSend: function() {
-                    toastr.info('Processing...', 'Please wait');
-                },
                 success: function(response) {
                     if (response.status === 'success') {
                         toastr.success(response.message);
@@ -783,17 +970,43 @@ try {
                 },
                 error: function() {
                     toastr.error('An error occurred while adding the candidate.');
+                },
+                complete: function() {
+                    // Re-enable the submit button when request completes
+                    submitBtn.prop('disabled', false).html('Submit');
                 }
             });
         });
-
-        // Reset forms when modals are closed
-        $('#editCandidateModal').on('hidden.bs.modal', function() {
-            $('#editCandidateForm')[0].reset();
-        });
-
         $('#addCandidateModal').on('hidden.bs.modal', function() {
             $('#candidateForm')[0].reset();
+        });
+    });
+</script>
+
+<!-- Modified table status indicators -->
+<script>
+    // Function to update status indicators and improve accessibility
+    function updateStatusIndicators() {
+        $('table tbody tr').each(function() {
+            var statusText = $(this).find('td:last-child span:last-child').text().trim().toLowerCase();
+            var statusIndicator = $(this).find('td:last-child span:first-child');
+
+            // Update status indicator classes
+            statusIndicator.removeClass('status-active status-pending status-archived');
+            statusIndicator.addClass('status-indicator status-' + statusText);
+
+            // Add title attribute for accessibility
+            statusIndicator.attr('title', statusText + ' status');
+        });
+    }
+
+    $(document).ready(function() {
+        // Call the function when page loads
+        updateStatusIndicators();
+
+        // Also update whenever DataTables redraws
+        $('#candidatesTable').on('draw.dt', function() {
+            updateStatusIndicators();
         });
     });
 </script>

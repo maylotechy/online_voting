@@ -157,6 +157,12 @@ $conn = null;
                             <p>Candidates</p>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="students.php" class="nav-link">
+                            <i class="nav-icon fas fa-user"></i>
+                            <p>Students</p>
+                        </a>
+                    </li>
                     <li class="nav-item"><a href="create_elections.php" class="nav-link">
                             <i class="nav-icon fas fa-rocket"></i><p>Launch Univ. Election</p></a></li>
 
