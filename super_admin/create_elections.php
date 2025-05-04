@@ -1,7 +1,9 @@
 <?php
 require '../config/db.php';
-$pdo = $GLOBALS['pdo'];
+include '../auth_session/auth_check_admin.php';
 
+$pdo = $GLOBALS['pdo'];
+ob_start();
 // Define the ordered positions
 $orderedPositions = [
     'President',
@@ -68,6 +70,20 @@ try {
 } catch (PDOException $e) {
     die("Database error: " . $e->getMessage());
 }
+
+// Display toastr notification if set
+if (!empty($_SESSION['toastr']) && is_array($_SESSION['toastr'])) {
+    $toastr = $_SESSION['toastr'];
+    $alert = '<script>
+        $(document).ready(function() {
+            toastr.'.json_encode($toastr['type']).'('.json_encode($toastr['message']).');
+        });
+    </script>';
+    unset($_SESSION['toastr']);
+} else {
+    $alert = '';
+}
+ob_end_flush();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -122,7 +138,40 @@ try {
         .college-badge i {
             margin-right: 6px;
         }
+
+        /* Loading spinner styles */
+        .btn-loading .spinner-border {
+            margin-right: 8px;
+            width: 1rem;
+            height: 1rem;
+            border-width: 0.15em;
+        }
+        .btn-loading .btn-text {
+            display: inline-block;
+        }
+        .confirmation-modal .modal-dialog {
+            max-width: 500px;
+        }
+        .confirmation-modal .modal-body {
+            padding: 2rem;
+        }
+        .confirmation-modal .modal-footer {
+            justify-content: center;
+            border-top: none;
+            padding-bottom: 2rem;
+        }
     </style>
+    <!-- Toastr CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <!-- jQuery -->
+    <script src="../plugins/jquery/jquery.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="../plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <!-- AdminLTE App -->
+    <script src="../dist/js/adminlte.min.js"></script>
+    <!-- Toastr JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <?= $alert ?>
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
 <div class="wrapper">
@@ -134,7 +183,7 @@ try {
                 <span class="ml-2 font-weight-bold">USM Comelec (Super Admin)</span>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a class="nav-link" onclick="Logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </li>
         </ul>
     </nav>
@@ -181,7 +230,7 @@ try {
     <div class="content-wrapper p-4">
         <h2>Launch University-Wide Election</h2>
 
-        <form action="process_create_election.php" method="POST" enctype="multipart/form-data">
+        <form id="electionForm" action="create_election_backend.php" method="POST" enctype="multipart/form-data">
             <div class="card shadow-lg">
                 <div class="card-header bg-gradient-primary text-white">
                     <h3 class="card-title mb-0">Create New Election</h3>
@@ -210,6 +259,8 @@ try {
                                 </h4>
 
                                 <div class="candidatesContainer row g-4 mb-4">
+                                    <!-- In the candidate card section -->
+                                    <input type="hidden" name="candidates[<?= $candidate['candidate_id'] ?>][id]" value="<?= $candidate['candidate_id'] ?>">
                                     <?php foreach ($group['candidates'] as $index => $candidate): ?>
                                         <div class="col-md-6 col-lg-4 mb-3">
                                             <div class="candidate-card p-3 border rounded-3 bg-white shadow-sm h-100">
@@ -309,17 +360,127 @@ try {
                 </div>
 
                 <!-- Form Actions -->
-                <div class="card-footer bg-light d-flex justify-content-end gap-3">
-                    <button type="submit" name="draft" class="btn btn-outline-secondary px-4 rounded-pill">
-                        <i class="far fa-save me-2"></i>Save Draft
-                    </button>
-                    <button type="submit" class="btn btn-primary px-4 rounded-pill">
-                        <i class="fas fa-check-circle me-2"></i>Create Election
+
+                <div class="card-footer bg-light d-flex justify-content-end">
+                    <button type="button" id="launchElectionBtn" class="btn btn-primary px-4 rounded-pill">
+                        <i class="fas fa-rocket me-2"></i>Launch Election
                     </button>
                 </div>
             </div>
         </form>
     </div>
 </div>
+<!-- Confirmation Modal -->
+<div class="modal fade confirmation-modal" id="confirmationModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="mb-4">
+                    <i class="fas fa-exclamation-circle fa-4x text-warning mb-3"></i>
+                    <h4>Confirm Election Launch</h4>
+                </div>
+                <p>You are about to launch a university-wide election. This action will:</p>
+                <ul class="text-left mb-4">
+                    <li>Send verification codes to all eligible students</li>
+                    <li>Make the election immediately active</li>
+                    <li>Cannot be undone once started</li>
+                </ul>
+                <p class="font-weight-bold">Are you sure you want to proceed?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary px-4" data-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmLaunchBtn" class="btn btn-primary px-4">
+                    <i class="fas fa-check-circle me-2"></i>Confirm Launch
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Toastr configuration
+        toastr.options = {
+            closeButton: true,
+            progressBar: true,
+            positionClass: 'toast-top-right',
+            timeOut: 5000,
+            escapeHtml: true
+        };
+
+        // Show confirmation modal when launch button is clicked
+        $('#launchElectionBtn').click(function() {
+            // Validate form first
+            if (!$('#electionForm')[0].checkValidity()) {
+                $('#electionForm')[0].reportValidity();
+                return;
+            }
+
+            $('#confirmationModal').modal('show');
+        });
+
+        // Handle confirmed launch
+        $('#confirmLaunchBtn').click(function() {
+            $('#confirmationModal').modal('hide');
+            submitElectionForm();
+        });
+
+        function submitElectionForm() {
+            var form = $('#electionForm');
+            var formData = new FormData(form[0]);
+            var launchBtn = $('#launchElectionBtn');
+
+            // Show loading state
+            launchBtn.html('<span class="spinner-border spinner-border-sm mr-2" role="status"></span> Launching...');
+            launchBtn.prop('disabled', true);
+
+            $.ajax({
+                url: form.attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json',
+                success: function(data) {
+                    if (data.success) {
+                        toastr.success(data.message);
+                        setTimeout(function() {
+                            window.location.href = data.redirect || 'create_elections.php';
+                        }, 2000);
+                    } else {
+                        toastr.error(data.message || 'Failed to launch election');
+                    }
+                },
+                error: function(xhr) {
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        toastr.error(response.message || 'An error occurred');
+                    } catch (e) {
+                        toastr.error('An error occurred: ' + xhr.responseText);
+                    }
+                },
+                complete: function() {
+                    // Reset button state
+                    launchBtn.html('<i class="fas fa-rocket me-2"></i>Launch Election');
+                    launchBtn.prop('disabled', false);
+                }
+            });
+        }
+
+        // Validate end date is after start date
+        $('#endDate').on('change', function() {
+            var startDate = new Date($('#startDate').val());
+            var endDate = new Date($(this).val());
+
+            if (endDate <= startDate) {
+                toastr.warning('End date must be after the start date');
+                $(this).val('');
+            }
+        });
+    });
+</script>
+<script src="/plugins/sweet-alert/sweetalert.js"></script>
+<script src="/js/logout.js"></script>
 </body>
 </html>

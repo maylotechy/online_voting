@@ -1,5 +1,7 @@
 <?php
 require "../config/db.php";
+// Check if user is logged in and is super admin (role_id = 1)
+include "../auth_session/auth_check_admin.php";
 $pdo = $GLOBALS['pdo'];
 // Sample values (replace these with DB queries)
 $totalUsers = 200;
@@ -131,7 +133,7 @@ $conn = null;
                 <span class="ml-2 font-weight-bold">USM Comelec (Super Admin)</span>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a class="nav-link" onclick="Logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </li>
         </ul>
     </nav>
@@ -362,5 +364,7 @@ $conn = null;
         }
     });
 </script>
+<script src="/plugins/sweet-alert/sweetalert.js"></script>
+<script src="/js/logout.js"></script>
 </body>
 </html>

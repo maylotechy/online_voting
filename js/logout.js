@@ -12,7 +12,7 @@ function Logout() {
         if (result.isConfirmed) { // Checks if "Yes" was clicked
             $.ajax({
                 type: "POST",
-                url: '/authentication/destroy-session.php',
+                url: '../auth_session/destroy_session.php',
                 success: function (data) {
                     const obj = JSON.parse(data);
                     if (obj.response === "success") {

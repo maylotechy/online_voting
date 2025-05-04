@@ -5,58 +5,43 @@
     <title>Student Login | AdminLTE</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Satoshi:wght@400;600&display=swap" rel="stylesheet">
-
+    <!-- Add Toastr CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         body {
             font-family: 'Satoshi', sans-serif;
         }
-
         .login-page {
             background: linear-gradient(135deg, #ffffff, #f0f0f0);
-            background-size: cover;
             min-height: 100vh;
             display: flex;
             align-items: center;
         }
-
         .login-box {
             width: 400px;
         }
-
         .login-card {
             border-radius: 10px;
             box-shadow: 0 0 25px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
         }
-
         .login-card-header {
             background: linear-gradient(45deg, #008080, #20c997);
             color: white;
             padding: 1.5rem;
             text-align: center;
-            border-bottom: none;
         }
-
         .admin-title {
-            display: flex;
-            align-items: center;
-            justify-content: center;
             font-size: 1.8rem;
             font-weight: bold;
-            margin-bottom: 0;
         }
-
         .admin-title i {
             margin-right: 10px;
-            font-size: 1.5rem;
         }
-
         .login-card-body {
             padding: 2rem;
         }
-
         .university-title {
             text-align: center;
             font-size: 1.5rem;
@@ -64,28 +49,23 @@
             color: #333;
             margin-bottom: 20px;
         }
-
         .logo {
             text-align: center;
             margin-bottom: 1rem;
         }
-
         .btn-teal {
-            background-color: teal;
-            border-color: teal;
-            color: #fff;
+            background-color: #20c997;
+            border-color: #20c997;
+            color: white;
         }
-
         .btn-teal:hover {
-            background-color: #007777;
-            border-color: #006666;
+            background-color: #1aa179;
+            border-color: #1aa179;
         }
-
         .cf-turnstile {
             width: 100% !important;
             margin: 15px 15px;
         }
-
         .cf-turnstile iframe {
             height: 38px !important;
         }
@@ -108,15 +88,6 @@
             border-color: #20c997;
             box-shadow: 0 0 0 0.25rem rgba(32, 201, 151, 0.25);
         }
-        .btn-teal {
-            background-color: #20c997;
-            border-color: #20c997;
-            color: white;
-        }
-        .btn-teal:hover {
-            background-color: #1aa179;
-            border-color: #1aa179;
-        }
     </style>
 </head>
 <body class="login-page">
@@ -124,24 +95,18 @@
     <div class="card login-card">
         <div class="card-header login-card-header">
             <h3 class="admin-title">
-                <i class="fas fa-user-graduate"></i>
-                STUDENT
+                <i class="fas fa-user-graduate"></i> STUDENT
             </h3>
         </div>
-
         <div class="card-body login-card-body">
-            <div class="university-title">
-                UNIVERSITY OF SOUTHERN MINDANAO
-            </div>
-
+            <div class="university-title">UNIVERSITY OF SOUTHERN MINDANAO</div>
             <div class="logo">
-                <img src="../asssets/super_admin/login-removebg-preview.png" alt="Student Logo" style="width: 100px; height: auto;">
+                <img src="../asssets/super_admin/login-removebg-preview.png" alt="Student Logo" style="width: 100px;">
             </div>
-
             <p class="login-box-msg">Sign in using your student credentials</p>
 
             <form id="loginForm">
-                <label class="form-label">Student id</label>
+                <label class="form-label">Student ID</label>
                 <div class="input-group mb-3">
                     <input type="text" name="student_id" class="form-control" placeholder="Student ID" required>
                     <div class="input-group-append">
@@ -151,22 +116,18 @@
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label">6-Digit Access Code</label>
-                    <div class="code-input">
-                        <input type="text" maxlength="1" class="form-control" pattern="\d" required name="code1">
-                        <input type="text" maxlength="1" class="form-control" pattern="\d" required name="code2">
-                        <input type="text" maxlength="1" class="form-control" pattern="\d" required name="code3">
-                        <input type="text" maxlength="1" class="form-control" pattern="\d" required name="code4">
-                        <input type="text" maxlength="1" class="form-control" pattern="\d" required name="code5">
-                        <input type="text" maxlength="1" class="form-control" pattern="\d" required name="code6">
-                    </div>
-                    <input type="hidden" id="accessCode" name="access_code">
+                <label class="form-label">6-Digit Access Code</label>
+                <div class="code-input">
+                    <input type="text" maxlength="1" class="form-control" required name="code1">
+                    <input type="text" maxlength="1" class="form-control" required name="code2">
+                    <input type="text" maxlength="1" class="form-control" required name="code3">
+                    <input type="text" maxlength="1" class="form-control" required name="code4">
+                    <input type="text" maxlength="1" class="form-control" required name="code5">
+                    <input type="text" maxlength="1" class="form-control" required name="code6">
                 </div>
+                <input type="hidden" id="accessCode" name="access_code">
 
-
-
-                <!-- Turnstile -->
+                <!-- Keep original Turnstile div -->
                 <div class="cf-turnstile mb-3"
                      data-sitekey="0x4AAAAAABXBqVxZ77CX3Fs3"
                      data-theme="light"
@@ -189,19 +150,62 @@
         </div>
     </div>
 </div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+<!-- Add Toastr JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
 <script>
+    // Configure Toastr
+    toastr.options = {
+        closeButton: true,
+        progressBar: true,
+        positionClass: 'toast-top-right',
+        timeOut: 5000,
+        extendedTimeOut: 1000,
+        showEasing: 'swing',
+        hideEasing: 'linear',
+        showMethod: 'fadeIn',
+        hideMethod: 'fadeOut'
+    };
+
     $(document).ready(function () {
+        // Move focus on digit entry
         $('.code-input input').keyup(function (e) {
-            if (e.which !== 8 && (e.which < 48 || e.which > 57)) {
+            // Allow only digits and backspace
+            if ((e.which < 48 || e.which > 57) && e.which !== 8) {
                 $(this).val('');
                 return false;
             }
-            if (this.value.length === this.maxLength) {
-                $(this).next('.code-input input').focus();
+
+            // If a digit is entered and we're at the max length, move to next input
+            if (this.value.length === this.maxLength && e.which >= 48 && e.which <= 57) {
+                $(this).next('input').focus();
+            }
+
+            // If backspace is pressed on empty input, move to previous input
+            if (e.which === 8 && this.value.length === 0) {
+                $(this).prev('input').focus();
             }
         });
 
-        $('#votingLoginForm').submit(function (e) {
+        // Handle pasting into code fields
+        $('.code-input').on('paste', function(e) {
+            e.preventDefault();
+            var pastedData = (e.originalEvent.clipboardData || window.clipboardData).getData('text');
+
+            // If it's 6 digits, distribute to the inputs
+            if (/^\d{6}$/.test(pastedData)) {
+                $('.code-input input').each(function(index) {
+                    $(this).val(pastedData.charAt(index));
+                });
+            }
+        });
+
+        $('#loginForm').submit(function (e) {
             e.preventDefault();
 
             let accessCode = '';
@@ -211,58 +215,36 @@
             $('#accessCode').val(accessCode);
 
             if (accessCode.length !== 6) {
-                alert('Please enter a complete 6-digit access code');
+                toastr.warning('Please enter a complete 6-digit access code', 'Incomplete Code');
                 return;
             }
 
-<!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script>
-    $('#loginForm').submit(function(e) {
-        e.preventDefault();
-        const btn = $(this).find('button[type="submit"]');
-        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Authenticating...');
-
-        $.ajax({
-            type: 'POST',
-            url: 'student_login_process.php',
-            data: $(this).serialize(),
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    Swal.fire({
-                        title: 'Success',
-                        text: response.message,
-                        icon: 'success',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        window.location.href = "student_dashboard.php";
-                    });
-                } else {
-                    Swal.fire({
-                        title: 'Failed',
-                        text: response.message,
-                        icon: 'error'
-                    });
+            const btn = $(this).find('button[type="submit"]');
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Authenticating...');
+            console.log($(this).serialize());
+            $.ajax({
+                type: 'POST',
+                url: 'student_login_process.php',
+                data: $(this).serialize(),
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        toastr.success(response.message, 'Success');
+                        setTimeout(function() {
+                            window.location.href = "voting_page.php";
+                        }, 1500);
+                    } else {
+                        toastr.error(response.message, 'Login Failed');
+                        if (typeof turnstile !== 'undefined') turnstile.reset();
+                    }
+                    btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Sign In');
+                },
+                error: function (xhr) {
+                    toastr.error(xhr.responseJSON?.message || 'Connection error. Please try again.', 'Error');
+                    btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Sign In');
                     if (typeof turnstile !== 'undefined') turnstile.reset();
                 }
-                btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Sign In');
-            },
-            error: function(xhr) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: xhr.responseJSON?.message || 'Connection error. Please try again.',
-                    confirmButtonColor: '#3085d6',
-                });
-                btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Sign In');
-                if (typeof turnstile !== 'undefined') turnstile.reset();
-            }
+            });
         });
     });
 </script>

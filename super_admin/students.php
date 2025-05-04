@@ -178,7 +178,7 @@ $voterTurnout = ($totalStudents > 0) ? round(($votedStudents / $totalStudents) *
                 <span class="ml-2 font-weight-bold">USM Comelec (Super Admin)</span>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a class="nav-link" onclick="Logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </li>
         </ul>
     </nav>
@@ -803,5 +803,7 @@ $voterTurnout = ($totalStudents > 0) ? round(($votedStudents / $totalStudents) *
         });
     });
 </script>
+    <script src="/plugins/sweet-alert/sweetalert.js"></script>
+    <script src="/js/logout.js"></script>
 </body>
 </html>

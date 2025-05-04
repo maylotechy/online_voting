@@ -3,6 +3,7 @@ global $pdo;
 session_start();
 require '../config/db.php';
 
+
 // Check if user is logged in and is super admin (role_id = 1)
 if (!isset($_SESSION['admin_id']) || $_SESSION['role_id'] != 1) {
     header('Location: login.php');
@@ -94,7 +95,7 @@ if (isset($_GET['success'])) {
                 <span class="ml-2 font-weight-bold">USM Comelec (Super Admin)</span>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a class="nav-link" onclick="Logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </li>
         </ul>
     </nav>
@@ -487,5 +488,7 @@ if (isset($_GET['success'])) {
         timeOut: 5000
     };
 </script>
+<script src="/plugins/sweet-alert/sweetalert.js"></script>
+<script src="/js/logout.js"></script>
 </body>
 </html>
