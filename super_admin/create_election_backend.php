@@ -1,4 +1,8 @@
 <?php
+ini_set('upload_max_filesize', '20M');
+ini_set('post_max_size', '20M');
+ini_set('memory_limit', '128M');
+set_time_limit(0);
 global $pdo;
 ob_start();
 session_start();
@@ -58,9 +62,30 @@ try {
         throw new Exception("End date must be after the start date.");
     }
 
-    // Handle PDF upload
+    // Then in your file upload handling:
     $rules_file_path = null;
-    if (isset($_FILES['election_rules']) && $_FILES['election_rules']['error'] === UPLOAD_ERR_OK) {
+    if (isset($_FILES['election_rules'])) {
+        $upload_errors = [
+            UPLOAD_ERR_INI_SIZE => 'File exceeds server limit (20MB max)',
+            UPLOAD_ERR_FORM_SIZE => 'File exceeds form limit',
+            UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
+            UPLOAD_ERR_NO_FILE => 'No file was uploaded',
+            UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder',
+            UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
+            UPLOAD_ERR_EXTENSION => 'File upload stopped by extension'
+        ];
+
+        if ($_FILES['election_rules']['error'] !== UPLOAD_ERR_OK) {
+            $errorMsg = $upload_errors[$_FILES['election_rules']['error']] ?? 'Unknown upload error';
+            throw new Exception($errorMsg);
+        }
+
+        // Additional manual size check (in bytes)
+        $max_size = 20 * 1024 * 1024; // 20MB
+        if ($_FILES['election_rules']['size'] > $max_size) {
+            throw new Exception("File size exceeds maximum allowed size of 20MB");
+        }
+
         $upload_dir = '../uploads/election_rules/';
         if (!file_exists($upload_dir)) {
             mkdir($upload_dir, 0755, true);
@@ -131,6 +156,12 @@ try {
             VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 DAY))
         ");
 
+        // Reset all students' has_voted to 0
+        $pdo->exec("UPDATE students SET has_voted = 0");
+
+        // Commit transaction
+        $pdo->commit();
+
         $mail = new PHPMailer(true);
         try {
             // SMTP Configuration
@@ -166,6 +197,12 @@ try {
                     $mail->Subject = 'Your Election Verification Code: ' . $_POST['title'];
                     $mail->Body = "
     <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+    
+        <!-- School Logo -->
+        <div style='text-align: center; margin-bottom: 20px;'>
+                <img src='https://www.usm.edu.ph/wp-content/uploads/2018/11/usm-seal.png' alt='USM Logo' style='max-height: 80px;'>
+        </div>
+        
         <h2 style='color: #2c3e50;'>Election Verification Code</h2>
         <p>Hello {$student['first_name']},</p>
         <p>Your verification code for the election <strong>{$_POST['title']}</strong> is:</p>
@@ -204,6 +241,7 @@ try {
         </div>
     </div>
 ";
+
 
                     if ($mail->send()) {
                         $successCount++;

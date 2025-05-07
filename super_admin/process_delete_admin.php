@@ -2,27 +2,30 @@
 session_start();
 require '../config/db.php';
 $pdo = $GLOBALS['pdo'];
+
 // Check if user is logged in and is super admin (role_id = 1)
 if (!isset($_SESSION['admin_id']) || $_SESSION['role_id'] != 1) {
-    header('Location: login.php');
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
     exit();
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+
     try {
         $admin_id = (int)$_POST['admin_id'];
 
-        // Validate admin ID
         if ($admin_id <= 0) {
             throw new Exception("Invalid admin ID");
         }
 
-        // Prevent deleting yourself
+        // Prevent deleting self
         if ($admin_id == $_SESSION['admin_id']) {
             throw new Exception("You cannot delete your own account");
         }
 
-        // Check if admin exists and is a college admin (role_id = 2)
+        // Verify admin exists and is deletable
         $stmt = $pdo->prepare("SELECT id FROM admins WHERE id = ? AND role_id = 2");
         $stmt->execute([$admin_id]);
 
@@ -30,25 +33,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Admin not found or cannot be deleted");
         }
 
-        // Delete the admin
+        // Delete admin
         $stmt = $pdo->prepare("DELETE FROM admins WHERE id = ?");
         $stmt->execute([$admin_id]);
 
-        $_SESSION['toastr'] = [
-            'type' => 'success',
-            'message' => 'Admin deleted successfully!'
-        ];
-
+        echo json_encode(['success' => true, 'message' => 'Admin deleted successfully']);
     } catch (Exception $e) {
-        $_SESSION['toastr'] = [
-            'type' => 'error',
-            'message' => $e->getMessage()
-        ];
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
-
-    header('Location: manage_admin.php');
-    exit();
 } else {
-    header('Location: manage_admin.php');
-    exit();
+    http_response_code(405); // Method Not Allowed
+    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
 }

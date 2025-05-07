@@ -25,7 +25,7 @@ if (isset($_POST['student_id'], $_POST['position_id'], $_POST['platform'], $_POS
         $stmt->execute([$student_id]);
 
         if ($stmt->rowCount() === 0) {
-            echo json_encode(['status' => 'error', 'message' => 'Student ID does not exist.']);
+            echo json_encode(['success' => false, 'message' => 'Student ID does not exist.']);
             exit;
         }
 
@@ -34,14 +34,22 @@ if (isset($_POST['student_id'], $_POST['position_id'], $_POST['platform'], $_POS
         $stmt->execute([$student_id]);
         $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($existing) {
-            if ($existing['status'] !== 'used') {
-                echo json_encode([
-                    'status' => 'error',
-                    'message' => 'This student is already registered as a candidate with a status active.'
-                ]);
-                exit;
-            }
+        // If the student is already an active candidate, prevent insertion
+        if ($existing && $existing['status'] === 'active') {
+            echo json_encode([
+                'success' => false,
+                'message' => 'This student is already registered as an active candidate.'
+            ]);
+            exit;
+        }
+
+// If status being submitted is NOT "pending", prevent duplicate insert
+        if ($existing && $status !== 'pending') {
+            echo json_encode([
+                'success' => false,
+                'message' => 'This student is already a candidate. You can only re-register them with a pending status.'
+            ]);
+            exit;
         }
 
         // 3. Insert candidate
@@ -49,11 +57,12 @@ if (isset($_POST['student_id'], $_POST['position_id'], $_POST['platform'], $_POS
                                  VALUES (?, ?, ?, ?, ?, ?, ?)");
         $insert->execute([$position_id, $student_id, $platform, $party_list, $uploaded_by, $status, $created_at]);
 
-        echo json_encode(['status' => 'success', 'message' => 'Candidate added successfully.']);
+        echo json_encode(['success' => true, 'message' => 'Candidate added successfully.']);
+
     } catch (PDOException $e) {
-        echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
 } else {
-    echo json_encode(['status' => 'error', 'message' => 'Incomplete form data.']);
+    echo json_encode(['success' => false, 'message' => 'Incomplete form data.']);
 }
 ?>

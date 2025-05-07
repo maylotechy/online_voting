@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/election_results/get_election_result.php" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/super_admin/create_elections.php" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/super_admin/edit_student.php" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/super_admin/export_results.php" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/super_admin/login_process.php" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/super_admin/manage_admin.php" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/super_admin/manage_candidates.php" dialect="GenericSQL" />

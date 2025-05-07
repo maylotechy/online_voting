@@ -17,7 +17,7 @@ if (
     $updated_at = date('Y-m-d H:i:s');
 
     if (!isset($_SESSION['admin_id'])) {
-        echo json_encode(['status' => 'error', 'message' => 'Admin not logged in.']);
+        echo json_encode(['status' => false, 'message' => 'Admin not logged in.']);
         exit;
     }
 
@@ -26,7 +26,7 @@ if (
         $checkStudent = $pdo->prepare("SELECT * FROM students WHERE student_id = ?");
         $checkStudent->execute([$student_id]);
         if ($checkStudent->rowCount() === 0) {
-            echo json_encode(['status' => 'error', 'message' => 'Student ID does not exist.']);
+            echo json_encode(['status' => false, 'message' => 'Student ID does not exist.']);
             exit;
         }
 
@@ -35,7 +35,7 @@ if (
         $checkDup->execute([$student_id, $candidate_id]);
 
         if ($checkDup->rowCount() > 0) {
-            echo json_encode(['status' => 'error', 'message' => 'Another active candidate with this Student ID exists.']);
+            echo json_encode(['status' => false, 'message' => 'Another active candidate with this Student ID exists.']);
             exit;
         }
 
@@ -52,10 +52,10 @@ if (
         ");
         $update->execute([$student_id, $position_id, $platform, $party_list, $status, $updated_at, $candidate_id]);
 
-        echo json_encode(['status' => 'success', 'message' => 'Candidate updated successfully.']);
+        echo json_encode(['status' => true, 'message' => 'Candidate updated successfully.']);
     } catch (PDOException $e) {
-        echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['status' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
 } else {
-    echo json_encode(['status' => 'error', 'message' => 'Incomplete form data.']);
+    echo json_encode(['status' => false, 'message' => 'Incomplete form data.']);
 }

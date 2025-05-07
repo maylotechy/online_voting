@@ -1,5 +1,4 @@
 <?php
-
 global $pdo;
 
 session_start();
@@ -25,7 +24,7 @@ if (!empty($_SESSION['toastr']) && is_array($_SESSION['toastr'])) {
     $alert = '';
 }
 
-// Database functions
+// Database functions (unchanged)
 function getColleges($pdo) {
     $stmt = $pdo->query("SELECT id, college_name AS c_name, code FROM colleges");
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -36,9 +35,7 @@ function getPositions($pdo) {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-function getCandidates($pdo)
-{
-    // Prepare and execute the SQL query
+function getCandidates($pdo) {
     $stmt = $pdo->query("
         SELECT 
             c.id AS candidate_id,
@@ -69,12 +66,10 @@ function getCandidates($pdo)
         ORDER BY 
             s.last_name, s.first_name;
     ");
-
-    // Fetch and return data as associative array
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// Get data
+// Get data (unchanged)
 try {
     $colleges = getColleges($pdo);
     $positions = getPositions($pdo);
@@ -110,462 +105,574 @@ try {
     <meta charset="UTF-8">
     <title>Manage Candidates</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- jQuery -->
-    <script src="../plugins/jquery/jquery.min.js"></script>
-    <!-- Toastr CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="../plugins/fontawesome-free/css/all.min.css">
-    <!-- AdminLTE -->
-    <link rel="stylesheet" href="../dist/css/adminlte.min.css">
-    <!-- Bootstrap -->
-    <link rel="stylesheet" href="../plugins/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="../custom_css/side-bar.css">
-    <!-- Toastr JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" href="../plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Toastr -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
-        .modern-modal .modal-content {
-            border: none;
-            border-radius: 4px;
-            box-shadow: 0 5px 15px rgba(0,0,0,.2);
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --info: #4895ef;
+            --warning: #f72585;
+            --danger: #e63946;
+            --light: #f8f9fa;
+            --dark: #212529;
         }
 
-        .modern-modal .modal-header {
-            border-bottom: 1px solid #e9ecef;
-            background-color: #007bff;
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f5f7fa;
+            overflow-x: hidden;
+        }
+
+        .navbar {
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 99;
+            background: white;
+            padding: 1rem 2rem;
+        }
+
+        .sidebar {
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
             color: white;
-            padding: 15px 20px;
-            border-top-left-radius: 4px;
-            border-top-right-radius: 4px;
+            height: 100vh;
+            position: fixed;
+            padding-top: 20px;
+            z-index: 100;
+            width: 250px;
+            overflow-y: auto;
+            left: 0;
+            top: 0;
         }
 
-        .modern-modal .modal-title {
-            font-weight: 500;
-            font-size: 1.2rem;
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            margin: 8px 16px;
+            transition: all 0.3s;
+            font-size: 0.95rem;
         }
 
-        .modern-modal .modal-body {
-            padding: 20px;
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
         }
 
-        .modern-modal .card {
+        .sidebar .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+        }
+
+        .logo-text {
+            font-weight: 700;
+            font-size: 1.5rem;
+            padding: 1rem;
+            color: white;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            letter-spacing: 1px;
+        }
+
+        .content-wrapper {
+            margin-left: 250px;
+            padding: 2rem;
+            width: calc(100% - 250px);
+            min-height: 100vh;
+        }
+
+        .card {
             border: none;
-            box-shadow: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+            overflow: hidden;
         }
 
-        .modern-modal .card-header {
-            background-color: #f8f9fa;
-            padding: 12px 20px;
-            border-bottom: 1px solid #e9ecef;
-            font-weight: 500;
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
-        .modern-modal .form-control {
-            border-radius: 3px;
-            border: 1px solid #ced4da;
-            padding: 8px 12px;
-            margin-bottom: 15px;
+        .card-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            background-color: white;
+            padding: 1.25rem;
         }
 
-        .modern-modal .form-control:focus {
-            border-color: #80bdff;
-            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 0;
+            font-size: 1.1rem;
         }
 
-        .modern-modal .modal-footer {
-            border-top: 1px solid #e9ecef;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: flex-end;
+        .card-body {
+            padding: 1.5rem;
         }
 
-        .modern-modal .btn {
-            border-radius: 3px;
-            padding: 8px 16px;
-            font-weight: 500;
+        .stats-card {
+            border-radius: 12px;
+            color: white;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s;
         }
 
-        .modern-modal .btn-primary {
-            background-color: #007bff;
-            border-color: #007bff;
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
         }
 
-        .modern-modal .btn-secondary {
-            background-color: #6c757d;
-            border-color: #6c757d;
-        }
-
-        .modern-modal .close {
-            text-shadow: none;
-            opacity: 1;
-        }
-
-        .modern-modal .close:hover {
+        .stats-card i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
             opacity: 0.8;
         }
 
-        /* New table controls styling */
-        .table-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 1.5rem;
+        .stats-card .count {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-card .label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .bg-students {
+            background: linear-gradient(135deg, #4361ee 0%, #3f37c9 100%);
+        }
+
+        .bg-voted {
+            background: linear-gradient(135deg, #4cc9f0 0%, #4895ef 100%);
+        }
+
+        .bg-not-voted {
+            background: linear-gradient(135deg, #f72585 0%, #e63946 100%);
+        }
+
+        .bg-turnout {
+            background: linear-gradient(135deg, #7209b7 0%, #560bad 100%);
+        }
+
+        .active-status {
+            color: #28a745;
+        }
+
+        .pending-status {
+            color: #ffc107;
+        }
+
+        .archived-status {
+            color: #dc3545;
+        }
+
+        .table-responsive {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background-color: #f8f9fa;
+            border-bottom-width: 1px;
+            font-weight: 600;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: #4361ee;
+            border-color: #4361ee;
+        }
+
+        .pagination .page-link {
+            color: #4361ee;
+        }
+
+        .filter-controls {
+            background-color: white;
             padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .search-control {
+            background-color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-dropdown {
             background-color: #f8f9fa;
-            border-radius: 0.25rem;
+            border-radius: 50px;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .filter-controls, .search-control {
-            flex: 1;
-            min-width: 250px;
+        .user-dropdown img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
         }
 
-        /* Hide the default DataTables search */
-        .dataTables_filter {
-            display: none;
+        /* Modal styles */
+        .modal-header {
+            background-color: var(--primary);
+            color: white;
         }
 
-        /* Filter dropdown styling */
-        #statusFilter {
-            width: 100%;
-            display: block;
-            margin-top: 5px;
+        .modal-header .btn-close {
+            filter: invert(1);
         }
 
-        /* Search input styling */
-        #searchInput {
-            width: 100%;
-            display: block;
-            margin-top: 5px;
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 80px;
+                padding-top: 15px;
+            }
+
+            .sidebar .nav-link {
+                text-align: center;
+                padding: 0.75rem;
+                margin: 8px auto;
+                max-width: 50px;
+            }
+
+            .sidebar .nav-link i {
+                margin-right: 0;
+                font-size: 1.25rem;
+            }
+
+            .sidebar .nav-link span {
+                display: none;
+            }
+
+            .logo-text {
+                font-size: 0;
+                padding: 0;
+            }
+
+            .logo-text::first-letter {
+                font-size: 1.5rem;
+            }
+
+            .content-wrapper {
+                margin-left: 80px;
+                width: calc(100% - 80px);
+                padding: 1rem;
+            }
+
+            .navbar {
+                padding: 1rem;
+            }
         }
-
-        /* Table header styling */
-        #candidatesTable thead th {
-            position: sticky;
-            top: 0;
-            background-color: #f8f9fa;
-            z-index: 10;
-            padding: 0.75rem;
-            vertical-align: middle;
-            border-bottom-width: 2px;
-        }
-
-        /* Table body styling */
-        #candidatesTable tbody td {
-            padding: 0.75rem;
-            vertical-align: middle;
-        }
-
-        /* Custom pagination styling */
-        .dataTables_paginate .paginate_button {
-            color: #333 !important;
-            background-color: #fff !important;
-            border: 1px solid #dee2e6 !important;
-            margin: 0 2px;
-        }
-
-        .dataTables_paginate .paginate_button.current {
-            background-color: #007bff !important;
-            border-color: #007bff !important;
-            color: white !important;
-        }
-
-        .dataTables_paginate .paginate_button:hover {
-            background-color: #e9ecef !important;
-        }
-
-
-
-
     </style>
 </head>
-<body class="hold-transition sidebar-mini layout-fixed">
-<div class="wrapper">
 
-    <?= $alert ?>
-
-    <!-- Navbar -->
-    <nav class="main-header navbar navbar-expand navbar-white navbar-light">
-        <ul class="navbar-nav ml-auto align-items-center">
-            <li class="nav-item d-flex align-items-center mr-3">
-                <img src="../asssets/super_admin/usm_comelec.jpg" class="img-circle elevation-2" style="width:30px; height:30px;">
-                <span class="ml-2 font-weight-bold">USM Comelec (Super Admin)</span>
+<body>
+<div class="d-flex">
+    <!-- Sidebar -->
+    <div class="sidebar col-lg-2 col-md-3 d-none d-md-block">
+        <div class="logo-text">
+            <i class="fas fa-vote-yea me-2"></i>USMVote
+        </div>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" href="dashboard.php">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" onclick="Logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a class="nav-link" href="manage_admin.php">
+                    <i class="fas fa-user-shield"></i>
+                    <span>College Admins</span>
+                </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="manage_candidates.php">
+                    <i class="fas fa-users"></i>
+                    <span>Candidates</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="students.php">
+                    <i class="fas fa-user-graduate"></i>
+                    <span>Students</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="create_elections.php">
+                    <i class="fas fa-rocket"></i>
+                    <span>Launch Election</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="results.php">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Election Results</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="election_history.php">
+                    <i class="fas fa-history"></i>
+                    <span>Election History</span>
+                </a>
+            </li>
+
         </ul>
-    </nav>
-
-    <!-- Sidebar -->
-    <aside class="main-sidebar sidebar-dark-primary elevation-4">
-        <a href="dashboard.php" class="brand-link">
-            <i class="fas fa-vote-yea ml-3"></i>
-            <span class="brand-text font-weight-light">USM Voting System</span>
-        </a>
-        <div class="sidebar">
-            <nav class="mt-2">
-                <ul class="nav nav-pills nav-sidebar flex-column">
-                    <li class="nav-item"><a href="dashboard.php" class="nav-link">
-                            <i class="nav-icon fas fa-tachometer-alt"></i><p>Dashboard</p></a></li>
-                    <li class="nav-item"><a href="manage_admin.php" class="nav-link">
-                            <i class="nav-icon fas fa-user-shield"></i><p>College Admins</p></a></li>
-
-                    <li class="nav-item">
-                        <a href="manage_candidates.php" class="nav-link active">
-                            <i class="nav-icon fas fa-users"></i>
-                            <p>Candidates</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="students.php" class="nav-link">
-                            <i class="nav-icon fas fa-user"></i>
-                            <p>Students</p>
-                        </a>
-                    </li>
-                    <li class="nav-item"><a href="create_elections.php" class="nav-link">
-                            <i class="nav-icon fas fa-rocket"></i><p>Launch Univ. Election</p></a></li>
-
-                    <li class="nav-item"><a href="results.php" class="nav-link">
-                            <i class="nav-icon fas fa-chart-bar"></i><p>Election Results</p></a></li>
-
-                    <li class="nav-item"><a href="election_history.php" class="nav-link">
-                            <i class="nav-icon fas fa-history"></i><p>Election History</p></a></li>
-
-                    <li class="nav-item"><a href="export_results.php" class="nav-link">
-                            <i class="nav-icon fas fa-download"></i><p>Export Results</p></a></li>
-                </ul>
-            </nav>
-        </div>
-    </aside>
-
-    <div class="content-wrapper p-4">
-        <h2>Manage Candidates</h2>
-        <button class="btn btn-success mb-3" data-toggle="modal" data-target="#addCandidateModal">
-            <i class="fas fa-user-plus mr-2"></i> Add Candidates
-        </button>
-
-        <!-- Summary Cards -->
-        <div class="row mt-3">
-            <div class="col-md-3 col-sm-6">
-                <div class="small-box bg-info">
-                    <div class="inner"><h3><?=  $total_candidates ?></h3><p>Total Candidates</p></div>
-                    <div class="icon"><i class="fas fa-users"></i></div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <div class="small-box bg-success">
-                    <div class="inner"><h3><?= $active_candidates ?></h3><p>Active</p></div>
-                    <div class="icon"><i class="fas fa-user-astronaut"></i></div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <div class="small-box bg-warning">
-                    <div class="inner"><h3><?= $pending_candidates ?></h3><p>Pending</p></div>
-                    <div class="icon"><i class="fas fa-hourglass-half"></i></div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <div class="small-box bg-danger">
-                    <div class="inner"><h3><?= $archived_candidates ?></h3><p>Archived</p></div>
-                    <div class="icon"><i class="fas fa-folder"></i></div>
-                </div>
-            </div>
-        </div>
+    </div>
 
 
-        <div class="card">
-            <div class="card-header">
-                <div class="table-controls">
-                    <div class="filter-controls">
-                        <label for="statusFilter">Filter by Status:</label>
-                        <select class="form-control" id="statusFilter">
-                            <option value="">All Statuses</option>
-                            <option value="active">Active</option>
-                            <option value="pending">Pending</option>
-                            <option value="archived">Archived</option>
-                        </select>
-                    </div>
-                    <div class="search-control">
-                        <label for="searchInput">Search:</label>
-                        <input type="text" class="form-control" id="searchInput" placeholder="Search candidates...">
+    <!-- Main Content -->
+    <div class="content-wrapper col">
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white rounded-3 mb-4">
+            <div class="container-fluid">
+                <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="ms-auto">
+                    <div class="dropdown">
+                        <button class="btn user-dropdown dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <img src="../asssets/super_admin/usm_comelec.jpg" alt="Admin" width="32" height="32">
+                            <span>USM Comelec</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i> Profile</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="Logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                        </ul>
                     </div>
                 </div>
             </div>
-            <div class="card-body table-responsive p-0">
-                <table id="candidatesTable" class="table table-bordered table-hover">
-                    <thead>
-                    <tr>
-                        <th>Student Id</th>
-                        <th>Full Name</th>
-                        <th>College</th>
-                        <th>Course</th>
-                        <th>Position</th>
-                        <th>Platform</th>
-                        <th>Party List</th>
-                        <th>Actions</th>
-                        <th>Status</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <?php if (!empty($candidates)): ?>
-                        <?php foreach ($candidates as $candidate): ?>
+        </nav>
+
+        <!-- Page Content -->
+        <div class="container-fluid">
+            <h2 class="mb-4">Candidate Management</h2>
+
+            <!-- Add Candidate Button -->
+            <div class="mb-4">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCandidateModal">
+                    <i class="fas fa-user-plus me-2"></i>Add Candidate
+                </button>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="stats-card bg-students">
+                        <i class="fas fa-users"></i>
+                        <div class="count"><?= $total_candidates ?></div>
+                        <div class="label">Total Candidates</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stats-card bg-voted">
+                        <i class="fas fa-user-check"></i>
+                        <div class="count"><?= $active_candidates ?></div>
+                        <div class="label">Active Candidates</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stats-card bg-not-voted">
+                        <i class="fas fa-hourglass-half"></i>
+                        <div class="count"><?= $pending_candidates ?></div>
+                        <div class="label">Pending Candidates</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stats-card bg-turnout">
+                        <i class="fas fa-archive"></i>
+                        <div class="count"><?= $archived_candidates ?></div>
+                        <div class="label">Archived Candidates</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filter-controls mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <div class="form-group mb-0">
+                            <label for="statusFilter" class="form-label">Status:</label>
+                            <select class="form-select" id="statusFilter">
+                                <option value="">All Statuses</option>
+                                <option value="active">Active</option>
+                                <option value="pending">Pending</option>
+                                <option value="archived">Archived</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="form-group mb-0">
+                            <label for="searchInput" class="form-label">Search:</label>
+                            <div class="input-group">
+                                <input type="text" id="searchInput" class="form-control" placeholder="Search candidates...">
+                                <button class="btn btn-outline-secondary" type="button">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Candidates Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Candidate Records</h3>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="candidatesTable">
+                            <thead class="table-light">
                             <tr>
-                                <td><?= htmlspecialchars($candidate['student_id']) ?></td>
-                                <td><?= htmlspecialchars($candidate['full_name']) ?></td>
-                                <td><?= htmlspecialchars($candidate['college_name']) ?></td>
-                                <td><?= htmlspecialchars($candidate['course_name']) ?></td>
-                                <td><?= htmlspecialchars($candidate['position_name']) ?></td>
-                                <td><?= htmlspecialchars($candidate['platform']) ?></td>
-                                <td><?= htmlspecialchars($candidate['party_list']) ?></td>
-                                <td>
-                                    <?php if ($candidate['status'] === 'archived'): ?>
-                                        <button class="btn btn-danger btn-sm delete-btn"
-                                                data-id="<?= $candidate['candidate_id'] ?>"
-                                                data-first-name="<?= htmlspecialchars($candidate['first_name']) ?>"
-                                                data-last-name="<?= htmlspecialchars($candidate['last_name']) ?>">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    <?php else: ?>
-                                        <button class="btn btn-warning btn-sm edit-btn"
-                                                data-id="<?= $candidate['candidate_id'] ?>"
-                                                data-student-id="<?= $candidate['student_id'] ?>"
-                                                data-first-name="<?= htmlspecialchars($candidate['first_name']) ?>"
-                                                data-last-name="<?= htmlspecialchars($candidate['last_name']) ?>"
-                                                data-email="<?= htmlspecialchars($candidate['email']) ?>"
-                                                data-college-id="<?= $candidate['college_id'] ?>"
-                                                data-college-name="<?= htmlspecialchars($candidate['college_name']) ?>"
-                                                data-course-id="<?= $candidate['course_id'] ?>"
-                                                data-course-name="<?= htmlspecialchars($candidate['course_name']) ?>"
-                                                data-position-id="<?= $candidate['position_id'] ?>"
-                                                data-position-name="<?= htmlspecialchars($candidate['position_name']) ?>"
-                                                data-platform="<?= htmlspecialchars($candidate['platform']) ?>"
-                                                data-party-list="<?= htmlspecialchars($candidate['party_list']) ?>"
-                                                data-status="<?= htmlspecialchars($candidate['status']) ?>">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php
-                                    $status = $candidate['status'];
-
-                                    $color = '';
-                                    switch ($status) {
-                                        case 'active':
-                                            $color = '#28a745'; // green
-                                            break;
-                                        case 'pending':
-                                            $color = '#ffc107'; // yellow
-                                            break;
-                                        case 'archived':
-                                            $color = '#dc3545'; // red
-                                            break;
-                                    }
-                                    ?>
-                                    <span style="
-                                            display: inline-block;
-                                            width: 12px;
-                                            height: 12px;
-                                            border-radius: 50%;
-                                            background-color: <?= $color ?>;
-                                            margin-right: 5px;
-                                            "></span>
-                                    <span><?= strtolower($status) ?></span>
-                                </td>
+                                <th>Student ID</th>
+                                <th>Full Name</th>
+                                <th>College</th>
+                                <th>Course</th>
+                                <th>Position</th>
+                                <th>Platform</th>
+                                <th>Party List</th>
+                                <th>Status</th>
+                                <th>Actions</th>
                             </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="9" class="text-center bg-danger text-white">NO DATA AVAILABLE</td>
-                        </tr>
-                    <?php endif; ?>
-                    </tbody>
-                </table>
+                            </thead>
+                            <tbody>
+                            <?php if (!empty($candidates)): ?>
+                                <?php foreach ($candidates as $candidate): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($candidate['student_id']) ?></td>
+                                        <td><?= htmlspecialchars($candidate['full_name']) ?></td>
+                                        <td><?= htmlspecialchars($candidate['college_name']) ?></td>
+                                        <td><?= htmlspecialchars($candidate['course_name']) ?></td>
+                                        <td><?= htmlspecialchars($candidate['position_name']) ?></td>
+                                        <td><?= htmlspecialchars($candidate['platform']) ?></td>
+                                        <td><?= htmlspecialchars($candidate['party_list']) ?></td>
+                                        <td class="<?= $candidate['status'] ?>-status">
+                                            <i class="fas <?=
+                                            $candidate['status'] === 'active' ? 'fa-check-circle' :
+                                                ($candidate['status'] === 'pending' ? 'fa-hourglass-half' : 'fa-archive')
+                                            ?>"></i>
+                                            <?= ucfirst($candidate['status']) ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($candidate['status'] === 'archived'): ?>
+                                                <button class="btn btn-sm btn-danger delete-btn"
+                                                        data-id="<?= $candidate['candidate_id'] ?>"
+                                                        data-name="<?= htmlspecialchars($candidate['full_name']) ?>">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            <?php else: ?>
+                                                <button class="btn btn-sm btn-warning edit-btn"
+                                                        data-id="<?= $candidate['candidate_id'] ?>"
+                                                        data-student-id="<?= $candidate['student_id'] ?>"
+                                                        data-first-name="<?= htmlspecialchars($candidate['first_name']) ?>"
+                                                        data-last-name="<?= htmlspecialchars($candidate['last_name']) ?>"
+                                                        data-email="<?= htmlspecialchars($candidate['email']) ?>"
+                                                        data-college-id="<?= $candidate['college_id'] ?>"
+                                                        data-course-id="<?= $candidate['course_id'] ?>"
+                                                        data-position-id="<?= $candidate['position_id'] ?>"
+                                                        data-position-name="<?= htmlspecialchars($candidate['position_name']) ?>"
+                                                        data-platform="<?= htmlspecialchars($candidate['platform']) ?>"
+                                                        data-party-list="<?= htmlspecialchars($candidate['party_list']) ?>"
+                                                        data-status="<?= htmlspecialchars($candidate['status']) ?>">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="9" class="text-center">No candidates found</td>
+                                </tr>
+                            <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Add Candidate Modal -->
-<div class="modal fade modern-modal" id="addCandidateModal" tabindex="-1" aria-labelledby="addCandidateModalLabel" aria-hidden="true">
+<div class="modal fade" id="addCandidateModal" tabindex="-1" aria-labelledby="addCandidateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form id="candidateForm" action="add_candidate.php" method="POST">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addCandidateModalLabel">
-                        <i class="fas fa-user-plus mr-2"></i>Add New Candidate
-                    </h5>
-                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+            <form id="candidateForm" method="POST">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addCandidateModalLabel"><i class="fas fa-user-plus me-2"></i>Add New Candidate</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0">Candidate Details</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="student_id" class="form-label">Student ID</label>
+                                <input type="text" class="form-control" id="student_id" name="student_id" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="position_id" class="form-label">Position</label>
+                                <select class="form-select" id="position_id" name="position_id" required>
+                                    <option value="">Select Position</option>
+                                    <?php foreach ($positions as $position): ?>
+                                        <option value="<?= $position['id'] ?>"><?= htmlspecialchars($position['name']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="student_id"><i class="fas fa-id-card mr-1"></i>Student ID</label>
-                                        <input type="text" class="form-control" id="student_id" name="student_id" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <!-- Position -->
-                                    <div class="form-group">
-                                        <label for="position_id"><i class="fas fa-briefcase mr-1"></i>Position</label>
-                                        <select class="form-control" id="position_id" name="position_id" required>
-                                            <option value="">Select Position</option>
-                                            <?php foreach ($positions as $position): ?>
-                                                <option value="<?= $position['id'] ?>"><?= htmlspecialchars($position['name']) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="party_list" class="form-label">Party List</label>
+                                <input type="text" class="form-control" id="party_list" name="party_list" required>
                             </div>
-
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <!-- Party List -->
-                                    <div class="form-group">
-                                        <label for="party_list"><i class="fas fa-flag mr-1"></i>Party List</label>
-                                        <input type="text" class="form-control" id="party_list" name="party_list" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <!-- Status -->
-                                    <div class="form-group">
-                                        <label for="status"><i class="fas fa-chart-line mr-1"></i>Status</label>
-                                        <select class="form-control" id="status" name="status" required>
-                                            <option value="">Select status</option>
-                                            <option value="active">Active</option>
-                                            <option value="pending">Pending</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Platform -->
-                            <div class="form-group">
-                                <label for="platform"><i class="fas fa-bullhorn mr-1"></i>Platform</label>
-                                <textarea class="form-control" id="platform" name="platform" rows="4" required></textarea>
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="">Select status</option>
+                                    <option value="active">Active</option>
+                                    <option value="pending">Pending</option>
+                                </select>
                             </div>
                         </div>
                     </div>
+                    <div class="mb-3">
+                        <label for="platform" class="form-label">Platform</label>
+                        <textarea class="form-control" id="platform" name="platform" rows="4" required></textarea>
+                    </div>
                 </div>
-
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                        <i class="fas fa-times mr-1"></i>Close
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-plus-circle mr-1"></i>Add Candidate
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Candidate</button>
                 </div>
             </form>
         </div>
@@ -573,209 +680,146 @@ try {
 </div>
 
 <!-- Edit Candidate Modal -->
-<div class="modal fade modern-modal" id="editCandidateModal" tabindex="-1" role="dialog" aria-labelledby="editCandidateModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+<div class="modal fade" id="editCandidateModal" tabindex="-1" aria-labelledby="editCandidateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form id="editCandidateForm" action="edit_candidate.php" method="POST">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editCandidateModalLabel">
-                        <i class="fas fa-user-edit mr-2"></i>Edit Candidate
-                    </h5>
-                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+            <form id="editCandidateForm" method="POST">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editCandidateModalLabel"><i class="fas fa-user-edit me-2"></i>Edit Candidate</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Hidden Fields -->
                     <input type="hidden" name="candidate_id" id="editCandidateId">
                     <input type="hidden" name="student_id" id="editStudentId">
 
-                    <!-- Candidate Information -->
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h6 class="mb-0">Candidate Information</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Student ID</label>
+                                <input type="text" class="form-control" id="editStudentIdDisplay" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="editFullName" readonly>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label><i class="fas fa-id-card mr-1"></i>Student ID</label>
-                                        <input type="text" class="form-control" id="editStudentIdDisplay" readonly>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label><i class="fas fa-user mr-1"></i>Full Name</label>
-                                        <input type="text" class="form-control" id="editFullName" readonly>
-                                    </div>
-                                </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Current Position</label>
+                                <input type="text" class="form-control" id="editCurrentPosition" readonly>
                             </div>
-
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label><i class="fas fa-briefcase mr-1"></i>Current Position</label>
-                                        <input type="text" class="form-control" id="editCurrentPosition" readonly>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="editPosition"><i class="fas fa-exchange-alt mr-1"></i>Change Position</label>
-                                        <select class="form-control" id="editPosition" name="position_id" required>
-                                            <option value="">Select New Position</option>
-                                            <?php foreach ($positions as $position): ?>
-                                                <option value="<?= $position['id'] ?>">
-                                                    <?= htmlspecialchars($position['name']) ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="editPartyList"><i class="fas fa-flag mr-1"></i>Party List</label>
-                                <input type="text" class="form-control" id="editPartyList" name="party_list" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="editPlatform"><i class="fas fa-bullhorn mr-1"></i>Platform</label>
-                                <textarea class="form-control" id="editPlatform" name="platform" rows="4" required></textarea>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="editStatus"><i class="fas fa-chart-line mr-1"></i>Status <small class="text-danger">(Changing to archived cannot be reverted)</small></label>
-                                <select class="form-control" id="editStatus" name="status" required>
-                                    <option value="active">Active</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="archived">Archived</option>
+                            <div class="mb-3">
+                                <label for="editPosition" class="form-label">Change Position</label>
+                                <select class="form-select" id="editPosition" name="position_id" required>
+                                    <option value="">Select New Position</option>
+                                    <?php foreach ($positions as $position): ?>
+                                        <option value="<?= $position['id'] ?>"><?= htmlspecialchars($position['name']) ?></option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                         </div>
                     </div>
+
+                    <div class="mb-3">
+                        <label for="editPartyList" class="form-label">Party List</label>
+                        <input type="text" class="form-control" id="editPartyList" name="party_list" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editPlatform" class="form-label">Platform</label>
+                        <textarea class="form-control" id="editPlatform" name="platform" rows="4" required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editStatus" class="form-label">Status</label>
+                        <select class="form-select" id="editStatus" name="status" required>
+                            <option value="active">Active</option>
+                            <option value="pending">Pending</option>
+                            <option value="archived">Archived</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                        <i class="fas fa-times mr-1"></i>Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save mr-1"></i>Save Changes
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
 <!-- Delete Confirmation Modal -->
-<div class="modal fade modern-modal" id="deleteCandidateModal" tabindex="-1" role="dialog" aria-labelledby="deleteCandidateModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+<div class="modal fade" id="deleteCandidateModal" tabindex="-1" aria-labelledby="deleteCandidateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
-            <form id="deleteCandidateForm" action="delete_candidate.php" method="POST">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteCandidateModalLabel">
-                        <i class="fas fa-trash-alt mr-2"></i>Confirm Delete
-                    </h5>
-                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>
-                        <span>Warning: This action cannot be undone!</span>
-                    </div>
-                    <p>Are you sure you want to delete the candidate <strong id="deleteCandidateName"></strong>?</p>
-                    <input type="hidden" name="candidate_id" id="deleteCandidateId">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                        <i class="fas fa-times mr-1"></i>Cancel
-                    </button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-trash-alt mr-1"></i>Delete
-                    </button>
-                </div>
-            </form>
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteCandidateModalLabel"><i class="fas fa-trash-alt me-2"></i>Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete candidate <strong id="deleteCandidateName"></strong>?</p>
+                <input type="hidden" id="deleteCandidateId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteCandidate">Delete</button>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Bootstrap JS -->
-<script src="../plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-<!-- AdminLTE -->
-<script src="../dist/js/adminlte.min.js"></script>
-<!-- DataTables JS -->
-<script src="../plugins/datatables/jquery.dataTables.min.js"></script>
-<script src="../plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Toastr -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<!-- DataTables -->
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 
 <script>
     $(document).ready(function() {
-        // Toastr configuration
-        toastr.options = {
-            closeButton: true,
-            progressBar: true,
-            positionClass: 'toast-top-right',
-            timeOut: 5000
-        };
-
-        // Initialize DataTable with your original configuration
+        // Initialize DataTable
         var table = $('#candidatesTable').DataTable({
-            "paging": true,
-            "lengthChange": false,
-            "searching": true,
-            "ordering": false,
-            "info": false,
-            "autoWidth": false,
-            "responsive": true,
-            "pageLength": 10,
-            "language": {
-                "paginate": {
-                    "previous": "<i class='fas fa-angle-left'></i>",
-                    "next": "<i class='fas fa-angle-right'></i>",
-                    "first": "<i class='fas fa-angle-double-left'></i>",
-                    "last": "<i class='fas fa-angle-double-right'></i>"
-                },
-                "info": "Showing _START_ to _END_ of _TOTAL_ candidates",
-                "infoEmpty": "No candidates found",
-                "infoFiltered": "(filtered from _MAX_ total candidates)",
-                "search": "",
-                "searchPlaceholder": "Search candidates..."
-            },
-            "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                "<'row'<'col-sm-12'tr>>" +
-                "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-            "columnDefs": [
-                { "orderable": false, "targets": [7] } // Disable sorting for Actions column
-            ],
-            "drawCallback": function(settings) {
-                // Add custom classes after each draw
-                $('.paginate_button').addClass('btn btn-sm btn-outline-secondary');
-                $('.paginate_button.current').removeClass('btn-outline-secondary')
-                    .addClass('btn-primary');
+            responsive: true,
+            pageLength: 10,
+            lengthChange: false,
+            info: false,
+            dom: 'lrtip',
+            language: {
+                search: "",
+                searchPlaceholder: "Search candidates..."
             }
         });
 
-        // Custom search input functionality
+        // Custom search input
         $('#searchInput').on('keyup', function() {
             table.search(this.value).draw();
         });
 
-        // Status filter functionality (your original logic)
+        // Status filter
         $('#statusFilter').on('change', function() {
             var val = $(this).val();
-
-            // Special handling for empty value (All Statuses)
             if (val === '') {
-                table.column(8).search('').draw();
+                table.column(7).search('').draw();
             } else {
-                // Filter the status column with case-insensitive exact match
-                table.column(8).search(val, false, false).draw();
+                table.column(7).search(val).draw();
             }
         });
 
-        // Edit button click handler
-        $('.edit-btn').click(function() {
-            // Get data attributes
+        // DELETE BUTTON (fix)
+        $(document).on('click', '.delete-btn', function() {
+            var candidateId = $(this).data('id');
+            var candidateName = $(this).data('name');
+
+            $('#deleteCandidateId').val(candidateId);
+            $('#deleteCandidateName').text(candidateName);
+            $('#deleteCandidateModal').modal('show');
+        });
+
+// EDIT BUTTON (fix)
+        $(document).on('click', '.edit-btn', function() {
             var id = $(this).data('id');
             var studentId = $(this).data('student-id');
             var firstName = $(this).data('first-name');
@@ -786,8 +830,6 @@ try {
             var partyList = $(this).data('party-list');
             var status = $(this).data('status');
 
-
-            // Set values in the form fields
             $('#editCandidateId').val(id);
             $('#editStudentId').val(studentId);
             $('#editStudentIdDisplay').val(studentId);
@@ -798,220 +840,101 @@ try {
             $('#editPlatform').val(platform);
             $('#editStatus').val(status);
 
-            // Show the modal
             $('#editCandidateModal').modal('show');
         });
 
 
-        // Delete candidate button click
-        $('.delete-btn').click(function() {
-            var candidateId = $(this).data('id');
-            var firstName = $(this).data('first-name');
-            var lastName = $(this).data('last-name');
-            var fullName = firstName + ' ' + lastName;
+        // Form submission handler for add candidate
+        $('#candidateForm').on('submit', function(e) {
+            e.preventDefault();
+            const form = $(this);
+            const submitBtn = form.find('[type="submit"]');
+            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Adding...');
 
-            // Set the values in the delete modal
-            $('#deleteCandidateId').val(candidateId);
-            $('#deleteCandidateName').text(fullName);
-
-            // Show the delete modal
-            $('#deleteCandidateModal').modal('show');
+            $.ajax({
+                url: 'add_candidate.php',
+                type: 'POST',
+                data: form.serialize(),
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                        $('#addCandidateModal').modal('hide');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function(xhr) {
+                    toastr.error(xhr.responseJSON?.message || 'Failed to add candidate');
+                },
+                complete: function() {
+                    submitBtn.prop('disabled', false).html('Add Candidate');
+                }
+            });
         });
-
 
         // Form submission handler for edit candidate
         $('#editCandidateForm').on('submit', function(e) {
             e.preventDefault();
             const form = $(this);
             const submitBtn = form.find('[type="submit"]');
-            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Saving...');
+
             $.ajax({
+                url: 'edit_candidate.php',
                 type: 'POST',
-                url: form.attr('action'),
                 data: form.serialize(),
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
                         toastr.success(response.message);
                         $('#editCandidateModal').modal('hide');
-                        setTimeout(() => location.reload(), 1500);
+                        setTimeout(() => location.reload(), 1000);
                     } else {
                         toastr.error(response.message);
                     }
                 },
                 error: function(xhr) {
-                    let errorMsg = 'Failed to update candidate';
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        errorMsg = response.message || errorMsg;
-                    } catch (e) {
-                        errorMsg = xhr.responseText || errorMsg;
-                    }
-                    toastr.error(errorMsg);
+                    toastr.error(xhr.responseJSON?.message || 'Failed to update candidate');
                 },
                 complete: function() {
                     submitBtn.prop('disabled', false).html('Save Changes');
                 }
             });
         });
-        // Reset forms when modals are closed
-        $('#editCandidateModal').on('hidden.bs.modal', function() {
-            $('#editCandidateForm')[0].reset();
-        });
 
+        // Delete confirmation handler
+        $('#confirmDeleteCandidate').click(function() {
+            const candidateId = $('#deleteCandidateId').val();
+            const btn = $(this);
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Deleting...');
 
-        $(document).ready(function() {
-            // Delete button click handler - shows modal
-            $(document).on('click', '.delete-btn', function() {
-                const candidateId = $(this).data('id');
-                const candidateName = $(this).data('full-name');
-
-                $('#deleteCandidateId').val(candidateId);
-                $('#deleteCandidateName').text(candidateName);
-                $('#deleteCandidateModal').modal('show');
-            });
-
-            // Form submission handler
-            $('#deleteCandidateForm').on('submit', function(e) {
-                e.preventDefault();
-
-                const form = $(this);
-                const submitBtn = form.find('[type="submit"]');
-                const cancelBtn = form.find('[data-dismiss="modal"]');
-
-                // Disable buttons and show loading state
-                submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Deleting...');
-                cancelBtn.prop('disabled', true);
-
-                $.ajax({
-                    url: form.attr('action'),
-                    type: 'POST',
-                    data: form.serialize(),
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            // Show success message
-                            toastr.success(response.message);
-
-                            // Close modal
-                            $('#deleteCandidateModal').modal('hide');
-
-                            // Refresh page after 1 second
-                            setTimeout(function() {
-                                location.reload();
-                            }, 1000);
-                        } else {
-                            // Show error message
-                            toastr.error(response.message || 'Failed to delete candidate');
-
-                            // Reset buttons
-                            submitBtn.prop('disabled', false).html('<i class="fas fa-trash-alt mr-1"></i> Delete');
-                            cancelBtn.prop('disabled', false);
-                        }
-                    },
-                    error: function(xhr) {
-                        // Parse error response
-                        let errorMessage = 'An error occurred while deleting the candidate';
-                        try {
-                            const response = JSON.parse(xhr.responseText);
-                            if (response.message) {
-                                errorMessage = response.message;
-                            }
-                        } catch (e) {
-                            errorMessage = xhr.statusText || errorMessage;
-                        }
-
-                        // Show error
-                        toastr.error(errorMessage);
-
-                        // Reset buttons
-                        submitBtn.prop('disabled', false).html('<i class="fas fa-trash-alt mr-1"></i> Delete');
-                        cancelBtn.prop('disabled', false);
-                    }
-                });
-            });
-
-            // Reset form when modal is closed
-            $('#deleteCandidateModal').on('hidden.bs.modal', function() {
-                $('#deleteCandidateForm')[0].reset();
-                const submitBtn = $('#deleteCandidateForm').find('[type="submit"]');
-                const cancelBtn = $('#deleteCandidateForm').find('[data-dismiss="modal"]');
-                submitBtn.prop('disabled', false).html('<i class="fas fa-trash-alt mr-1"></i> Delete');
-                cancelBtn.prop('disabled', false);
-            });
-        });
-
-        // Add Candidate form submission
-        $('#candidateForm').on('submit', function(e) {
-            e.preventDefault();
-            var formData = $(this).serialize();
-            if ($('#student_id').val() === '' || $('#position_id').val() === '' ||
-                $('#platform').val() === '' || $('#party_list').val() === '' || $('#status').val() === '') {
-                toastr.error('All fields are required.');
-                return;
-            }
-            // Fixed: Using $(this) instead of undefined 'form' variable
-            const submitBtn = $(this).find('[type="submit"]');
-            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
             $.ajax({
-                url: 'add_candidate.php',
+                url: 'delete_candidate.php',
                 type: 'POST',
-                data: formData,
+                data: { candidate_id: candidateId },
                 dataType: 'json',
                 success: function(response) {
-                    if (response.status === 'success') {
+                    if (response.success) {
                         toastr.success(response.message);
-                        $('#addCandidateModal').modal('hide');
-                        $('#candidateForm')[0].reset();
-                        location.reload();
+                        $('#deleteCandidateModal').modal('hide');
+                        setTimeout(() => location.reload(), 1000);
                     } else {
                         toastr.error(response.message);
                     }
                 },
-                error: function() {
-                    toastr.error('An error occurred while adding the candidate.');
+                error: function(xhr) {
+                    toastr.error(xhr.responseJSON?.message || 'Failed to delete candidate');
                 },
                 complete: function() {
-                    // Re-enable the submit button when request completes
-                    submitBtn.prop('disabled', false).html('Submit');
+                    btn.prop('disabled', false).html('Delete');
                 }
             });
         });
-        $('#addCandidateModal').on('hidden.bs.modal', function() {
-            $('#candidateForm')[0].reset();
-        });
     });
 </script>
 
-<!-- Modified table status indicators -->
-<script>
-    // Function to update status indicators and improve accessibility
-    function updateStatusIndicators() {
-        $('table tbody tr').each(function() {
-            var statusText = $(this).find('td:last-child span:last-child').text().trim().toLowerCase();
-            var statusIndicator = $(this).find('td:last-child span:first-child');
-
-            // Update status indicator classes
-            statusIndicator.removeClass('status-active status-pending status-archived');
-            statusIndicator.addClass('status-indicator status-' + statusText);
-
-            // Add title attribute for accessibility
-            statusIndicator.attr('title', statusText + ' status');
-        });
-    }
-
-    $(document).ready(function() {
-        // Call the function when page loads
-        updateStatusIndicators();
-
-        // Also update whenever DataTables redraws
-        $('#candidatesTable').on('draw.dt', function() {
-            updateStatusIndicators();
-        });
-    });
-</script>
-<script src="/plugins/sweet-alert/sweetalert.js"></script>
 <script src="/js/logout.js"></script>
-
 </body>
 </html>

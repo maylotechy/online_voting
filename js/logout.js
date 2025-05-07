@@ -1,4 +1,4 @@
-function Logout() {
+function LogOut() {
     console.log("Logout");
     Swal.fire({
         title: "Logout Confirmation",

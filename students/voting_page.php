@@ -8,6 +8,13 @@ if (!isset($_SESSION['student_id'])) {
     header('Location: login.php');
     exit();
 }
+
+// Check if student has agreed to terms (new session variable)
+if (!isset($_SESSION['terms_accepted'])) {
+    header('Location: terms.php');
+    exit();
+}
+
 if ($_SESSION['voting_allowed'] !== true and $_SESSION['otp_verified'] !== true) {
     header('Location: login.php');
     exit();
@@ -57,7 +64,7 @@ try {
     if (!empty($election_ids)) {
         // Get position information including number_of_winners
         $stmt = $pdo->prepare("
-            SELECT DISTINCT p.id, p.name, p.`order`, p.number_of_winners
+            SELECT DISTINCT p.id, p.name, p.`order`, p.max_winners
             FROM positions p
             JOIN candidates c ON p.id = c.position_id
             WHERE c.election_id IN ($placeholders)
@@ -84,7 +91,7 @@ try {
                 FIELD(c.election_id, " . implode(',', $election_ids) . "),
                 p.`order`,
                 p.name
-        ");
+                 ");
         $stmt->execute($election_ids);
         $candidates = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -93,19 +100,20 @@ try {
     $grouped_candidates = [];
     foreach ($candidates as $candidate) {
         $pos_id = $candidate['position_id'];
-        $number_of_winners = $position_info[$pos_id]['number_of_winners'] ?? 1;
+        $election_id = $candidate['election_id'];
 
-        $grouped_candidates[$candidate['election_id']][$pos_id] = [
-            'position_name' => $candidate['position_name'],
-            'position_order' => $candidate['position_order'],
-            'number_of_winners' => $number_of_winners,
-            'candidates' => []
-        ];
-    }
+        if (!isset($grouped_candidates[$election_id][$pos_id])) {
+            $number_of_winners = $position_info[$pos_id]['max_winners'] ?? 1;
 
-    // Now populate the candidates
-    foreach ($candidates as $candidate) {
-        $grouped_candidates[$candidate['election_id']][$candidate['position_id']]['candidates'][] = $candidate;
+            $grouped_candidates[$election_id][$pos_id] = [
+                'position_name' => $candidate['position_name'],
+                'position_order' => $candidate['position_order'],
+                'number_of_winners' => $number_of_winners,
+                'candidates' => []
+            ];
+        }
+
+        $grouped_candidates[$election_id][$pos_id]['candidates'][] = $candidate;
     }
 
     // Sort each election's positions by their order
@@ -127,22 +135,118 @@ try {
     <meta charset="UTF-8">
     <title>Election Voting</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- AdminLTE + Bootstrap CSS -->
-    <link rel="stylesheet" href="../plugins/fontawesome-free/css/all.min.css">
-    <link rel="stylesheet" href="../dist/css/adminlte.min.css">
-    <link rel="stylesheet" href="../plugins/bootstrap/css/bootstrap.min.css">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Toastr CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
         :root {
             --primary: #4361ee;
-            --primary-dark: #3a0ca3;
             --secondary: #3f37c9;
-            --accent: #4895ef;
+            --success: #4cc9f0;
+            --info: #4895ef;
+            --warning: #f72585;
+            --danger: #e63946;
             --light: #f8f9fa;
             --dark: #212529;
-            --success: #4cc9f0;
-            --danger: #f72585;
-            --gray: #6c757d;
-            --light-gray: #e9ecef;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f5f7fa;
+            overflow-x: hidden;
+        }
+
+        .navbar {
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 99;
+            background: white;
+            padding: 1rem 2rem;
+        }
+
+        .sidebar {
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+            color: white;
+            height: 100vh;
+            position: fixed;
+            padding-top: 20px;
+            z-index: 100;
+            width: 250px;
+            overflow-y: auto;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            margin: 8px 16px;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .sidebar .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+        }
+
+        .logo-text {
+            font-weight: 700;
+            font-size: 1.5rem;
+            padding: 1rem;
+            color: white;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            letter-spacing: 1px;
+        }
+
+        .content-wrapper {
+            margin-left: 250px;
+            padding: 2rem;
+            width: calc(100% - 250px);
+            min-height: 100vh;
+        }
+
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            background-color: white;
+            padding: 1.25rem;
+        }
+
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 0;
+            font-size: 1.1rem;
+        }
+
+        .card-body {
+            padding: 1.5rem;
         }
 
         /* Checkbox styles */
@@ -184,100 +288,20 @@ try {
             border-radius: 8px;
         }
 
-        body {
-            background-color: #f5f7fa;
-            font-family: 'Satoshi', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .election-container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .election-card {
-            border-radius: 16px;
-            border: none;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
-            overflow: hidden;
-            margin-bottom: 40px;
-            transition: transform 0.3s ease;
-            background: white;
-        }
-
-        .election-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 35px rgba(0,0,0,0.12);
-        }
-
-        .election-header {
-            padding: 25px 30px;
-            color: white;
-            position: relative;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-        }
-
-        .usg-header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-        }
-
-        .lsg-header {
-            background: linear-gradient(135deg, #7209b7, #3a0ca3);
-        }
-
-        .election-title {
-            font-weight: 700;
-            font-size: 1.5rem;
-            margin-bottom: 5px;
-        }
-
-        .election-subtitle {
-            opacity: 0.9;
-            font-weight: 400;
-        }
-
-        .position-section {
-            margin-bottom: 30px;
-        }
-
-        .position-header {
-            padding: 15px 25px;
-            background-color: var(--light);
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-            font-weight: 600;
-            color: var(--dark);
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-        }
-
-        .position-icon {
-            margin-right: 10px;
-            color: var(--primary);
-        }
-
-        .candidates-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 20px;
-            padding: 25px;
-        }
-
+        /* Candidate cards */
         .candidate-card {
-            border-radius: 12px;
-            border: 1px solid rgba(0,0,0,0.08);
-            background: white;
-            transition: all 0.3s ease;
-            overflow: hidden;
-            box-shadow: 0 3px 15px rgba(0,0,0,0.03);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            background-color: white;
+            transition: all 0.3s;
             position: relative;
-            padding: 20px;
-            cursor: pointer;
         }
 
         .candidate-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-            border-color: rgba(67, 97, 238, 0.2);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
         }
 
         .candidate-selected {
@@ -298,7 +322,7 @@ try {
             object-fit: cover;
             margin-right: 20px;
             border: 3px solid white;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
         }
 
         .candidate-details {
@@ -328,111 +352,6 @@ try {
             color: var(--gray);
         }
 
-        .vote-radio {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 22px;
-            height: 22px;
-            cursor: pointer;
-        }
-
-        .no-election {
-            text-align: center;
-            padding: 60px 20px;
-            background-color: white;
-            border-radius: 16px;
-            margin-bottom: 30px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-        }
-
-        .no-election i {
-            font-size: 4em;
-            color: #dee2e6;
-            margin-bottom: 20px;
-        }
-
-        .no-election h4 {
-            color: var(--gray);
-            font-weight: 600;
-        }
-
-        .btn-vote {
-            margin-top: 30px;
-            padding: 12px 35px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border: none;
-            box-shadow: 0 5px 20px rgba(67, 97, 238, 0.3);
-            font-size: 1.1rem;
-            transition: all 0.3s;
-        }
-
-        .btn-vote:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.4);
-        }
-
-        /* Navbar Styles */
-        .navbar-brand {
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-
-        .nav-profile {
-            display: flex;
-            align-items: center;
-        }
-
-        .nav-profile-img {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            margin-right: 10px;
-            object-fit: cover;
-            border: 2px solid rgba(255,255,255,0.2);
-        }
-
-        /* Sidebar Styles */
-        .sidebar {
-            background: white;
-            box-shadow: 2px 0 20px rgba(0,0,0,0.05);
-        }
-
-        .nav-item {
-            margin-bottom: 5px;
-        }
-
-        .nav-link {
-            border-radius: 8px;
-            color: var(--dark);
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .nav-link.active {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white !important;
-            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.2);
-        }
-
-        .nav-link:hover:not(.active) {
-            background-color: rgba(67, 97, 238, 0.1);
-        }
-
-        /* Content Header */
-        .content-header h2 {
-            font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 10px;
-        }
-
-        .content-header p {
-            color: var(--gray);
-        }
-
         /* Platform section */
         .platform-section {
             background-color: #f8f9fa;
@@ -459,11 +378,11 @@ try {
         }
 
         .platform-content {
-            max-height: 120px; /* Fixed height */
-            overflow-y: auto;  /* Make it scrollable */
+            max-height: 120px;
+            overflow-y: auto;
         }
 
-        /* Custom scrollbar for platform content */
+        /* Custom scrollbar */
         .platform-content::-webkit-scrollbar {
             width: 5px;
         }
@@ -476,51 +395,266 @@ try {
             background: var(--primary);
             border-radius: 5px;
         }
+
+        /* Election header styles */
+        .election-header {
+            padding: 25px 30px;
+            color: white;
+            position: relative;
+        }
+
+        .usg-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        }
+
+        .lsg-header {
+            background: linear-gradient(135deg, #7209b7, #3a0ca3);
+        }
+
+        .election-title {
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .election-subtitle {
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        /* Position header */
+        .position-header {
+            padding: 15px 25px;
+            background-color: var(--light);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .position-icon {
+            margin-right: 10px;
+            color: var(--primary);
+        }
+
+        /* Candidates grid */
+        .candidates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            padding: 25px;
+        }
+
+        /* No election message */
+        .no-election {
+            text-align: center;
+            padding: 60px 20px;
+            background-color: white;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .no-election i {
+            font-size: 4em;
+            color: #dee2e6;
+            margin-bottom: 20px;
+        }
+
+        .no-election h4 {
+            color: var(--gray);
+            font-weight: 600;
+        }
+
+        /* Vote button */
+        .btn-vote {
+            margin-top: 30px;
+            padding: 12px 35px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            box-shadow: 0 5px 20px rgba(67, 97, 238, 0.3);
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        .btn-vote:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.4);
+            color: white;
+        }
+
+        /* Rules download section */
+        .rules-section {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        .rules-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+        }
+
+        .rules-title i {
+            margin-right: 10px;
+        }
+
+        .rules-content {
+            margin-bottom: 15px;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #4cc9f0, #4895ef);
+            border: none;
+            color: white;
+            font-weight: 500;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 80px;
+                padding-top: 15px;
+            }
+
+            .sidebar .nav-link {
+                text-align: center;
+                padding: 0.75rem;
+                margin: 8px auto;
+                max-width: 50px;
+            }
+
+            .sidebar .nav-link i {
+                margin-right: 0;
+                font-size: 1.25rem;
+            }
+
+            .sidebar .nav-link span {
+                display: none;
+            }
+
+            .logo-text {
+                font-size: 0;
+                padding: 0;
+            }
+
+            .logo-text::first-letter {
+                font-size: 1.5rem;
+            }
+
+            .content-wrapper {
+                margin-left: 80px;
+                width: calc(100% - 80px);
+                padding: 1rem;
+            }
+
+            .navbar {
+                padding: 1rem;
+            }
+
+            .candidates-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
-<body class="hold-transition sidebar-mini layout-fixed">
-<div class="wrapper">
-
-    <!-- Navbar -->
-    <nav class="main-header navbar navbar-expand navbar-white navbar-light">
-        <ul class="navbar-nav ml-auto align-items-center">
-            <li class="nav-item nav-profile">
-                <img src="../asssets/super_admin/profile.png" class="nav-profile-img">
-                <span class="font-weight-bold"><?= htmlspecialchars($student_name) ?></span>
+<body>
+<div class="d-flex">
+    <!-- Sidebar -->
+    <div class="sidebar col-lg-2 col-md-3 d-none d-md-block">
+        <div class="logo-text">
+            <i class="fas fa-vote-yea me-2"></i>USMVote
+        </div>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link active" href="elections.php">
+                    <i class="fas fa-vote-yea"></i>
+                    <span>Voting</span>
+                </a>
             </li>
-            <li class="nav-item ml-3">
-                <a class="nav-link" href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            <li class="nav-item">
+                <a class="nav-link" href="../students/realtime_results.php">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Results</span>
+                </a>
             </li>
         </ul>
-    </nav>
+    </div>
 
-    <!-- Sidebar -->
-    <aside class="main-sidebar sidebar-dark-primary elevation-4">
-        <a href="elections.php" class="brand-link">
-            <i class="fas fa-vote-yea ml-3"></i>
-            <span class="brand-text font-weight-light">Student Portal</span>
-        </a>
-        <div class="sidebar">
-            <nav class="mt-2">
-                <ul class="nav nav-pills nav-sidebar flex-column">
-                    <li class="nav-item"><a href="elections.php" class="nav-link active">
-                            <i class="nav-icon fas fa-vote-yea"></i><p>Elections</p></a></li>
-                </ul>
-            </nav>
-        </div>
-    </aside>
+    <!-- Main Content -->
+    <div class="content-wrapper col">
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white rounded-3 mb-4">
+            <div class="container-fluid">
+                <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="ms-auto">
+                    <div class="dropdown">
+                        <button class="btn user-dropdown dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <img src="../asssets/super_admin/usm_comelec.jpg" alt="Student" class="rounded-circle" width="32">
+                            <span><?= htmlspecialchars($student_name) ?></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i> Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="Logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
 
-    <!-- Content Wrapper -->
-    <div class="content-wrapper p-4">
-        <div class="container-fluid election-container">
+        <!-- Page Content -->
+        <div class="container-fluid">
             <div class="content-header text-center mb-5">
                 <h2>Current Elections</h2>
                 <p>Cast your vote for the ongoing elections</p>
             </div>
 
-            <form id="votingForm" action="process_vote.php" method="POST">
+            <!-- Election Rules Section -->
+            <div class="rules-section mb-4">
+                <h5 class="rules-title"><i class="fas fa-file-alt"></i> Election Rules and Guidelines</h5>
+                <div class="rules-content">
+                    <p>Please review the election rules before voting. You can download the complete guidelines document below.</p>
+                </div>
+                <?php if (!empty($usg_elections) || !empty($lsg_elections)): ?>
+                    <?php
+                    // Get the first election that has rules (prioritize USG)
+                    $electionWithRules = null;
+                    foreach (array_merge($usg_elections, $lsg_elections) as $election) {
+                        if (!empty($election['rules_file'])) {
+                            $electionWithRules = $election;
+                            break;
+                        }
+                    }
+                    ?>
+                    <?php if ($electionWithRules): ?>
+                        <a href="../students/donwload_rules.php?election_id=<?= $electionWithRules['id'] ?>" class="btn btn-download">
+                            <i class="fas fa-download me-2"></i> Download Election Rules (PDF)
+                        </a>
+                    <?php else: ?>
+                        <button class="btn btn-download" disabled>
+                            <i class="fas fa-download me-2"></i> No Rules Available
+                        </button>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+
+            <form id="votingForm" action="process_vote.php" method="POST" enctype="multipart/form-data">
                 <!-- University-wide Elections (USG) Section -->
-                <div class="election-card">
+                <div class="card mb-4">
                     <?php if (!empty($usg_elections)): ?>
                         <?php foreach ($usg_elections as $election): ?>
                             <div class="election-header usg-header">
@@ -538,24 +672,32 @@ try {
                                                 <i class="fas fa-user-tie position-icon"></i>
                                                 <?= htmlspecialchars($position_data['position_name']) ?>
                                                 <?php if ($position_data['number_of_winners'] > 1): ?>
-                                                    <span class="badge badge-info ml-2">
-                                                    Select up to <?= $position_data['number_of_winners'] ?> candidates
-                                                </span>
+                                                    <span class="badge bg-info ms-2">
+                                                        Select up to <?= $position_data['number_of_winners'] ?> candidates
+                                                    </span>
                                                 <?php endif; ?>
                                             </div>
 
+                                            <?php if ($position_data['number_of_winners'] > 1): ?>
+                                                <div class="warning-container px-4 pt-3">
+                                                    <div class="max-selected-warning" id="warning-<?= $election['id'] ?>-<?= $position_id ?>">
+                                                        You can only select up to <?= $position_data['number_of_winners'] ?> candidates for this position
+                                                    </div>
+                                                </div>
+                                            <?php endif; ?>
+
                                             <div class="candidates-grid">
                                                 <?php foreach ($position_data['candidates'] as $candidate): ?>
-                                                    <div class="candidate-card">
+                                                    <div class="candidate-card" data-position="<?= $position_id ?>" data-election="<?= $election['id'] ?>">
                                                         <?php if ($position_data['number_of_winners'] > 1): ?>
                                                             <input type="checkbox"
-                                                                   name="vote[<?= $election['id'] ?>][<?= $position_id ?>][]"
+                                                                   name="votes[<?= $election['id'] ?>][<?= $position_id ?>][]"
                                                                    value="<?= $candidate['id'] ?>"
                                                                    class="vote-checkbox"
                                                                    data-max-selected="<?= $position_data['number_of_winners'] ?>">
                                                         <?php else: ?>
                                                             <input type="radio"
-                                                                   name="vote[<?= $election['id'] ?>][<?= $position_id ?>]"
+                                                                   name="votes[<?= $election['id'] ?>][<?= $position_id ?>]"
                                                                    value="<?= $candidate['id'] ?>"
                                                                    required
                                                                    class="vote-radio">
@@ -610,7 +752,7 @@ try {
                 </div>
 
                 <!-- College-based Elections (LSG) Section -->
-                <div class="election-card">
+                <div class="card mb-4">
                     <?php if (!empty($lsg_elections)): ?>
                         <?php foreach ($lsg_elections as $election): ?>
                             <div class="election-header lsg-header">
@@ -627,28 +769,33 @@ try {
                                             <div class="position-header">
                                                 <i class="fas fa-user-tie position-icon"></i>
                                                 <?= htmlspecialchars($position_data['position_name']) ?>
+                                                <?php if ($position_data['number_of_winners'] > 1): ?>
+                                                    <span class="badge bg-info ms-2">
+                                                        Select up to <?= $position_data['number_of_winners'] ?> candidates
+                                                    </span>
+                                                <?php endif; ?>
                                             </div>
 
-                                            <div class="candidates-grid">
-                                                <?php if ($position_data['number_of_winners'] > 1): ?>
-                                                    <div class="col-12">
-                                                        <div class="max-selected-warning" id="warning-<?= $election['id'] ?>-<?= $position_id ?>">
-                                                            You can only select up to <?= $position_data['number_of_winners'] ?> candidates for this position
-                                                        </div>
+                                            <?php if ($position_data['number_of_winners'] > 1): ?>
+                                                <div class="warning-container px-4 pt-3">
+                                                    <div class="max-selected-warning" id="warning-<?= $election['id'] ?>-<?= $position_id ?>">
+                                                        You can only select up to <?= $position_data['number_of_winners'] ?> candidates for this position
                                                     </div>
-                                                <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
 
+                                            <div class="candidates-grid">
                                                 <?php foreach ($position_data['candidates'] as $candidate): ?>
                                                     <div class="candidate-card" data-position="<?= $position_id ?>" data-election="<?= $election['id'] ?>">
                                                         <?php if ($position_data['number_of_winners'] > 1): ?>
                                                             <input type="checkbox"
-                                                                   name="vote[<?= $election['id'] ?>][<?= $position_id ?>][]"
+                                                                   name="votes[<?= $election['id'] ?>][<?= $position_id ?>][]"
                                                                    value="<?= $candidate['id'] ?>"
                                                                    class="vote-checkbox"
                                                                    data-max-selected="<?= $position_data['number_of_winners'] ?>">
                                                         <?php else: ?>
                                                             <input type="radio"
-                                                                   name="vote[<?= $election['id'] ?>][<?= $position_id ?>]"
+                                                                   name="votes[<?= $election['id'] ?>][<?= $position_id ?>]"
                                                                    value="<?= $candidate['id'] ?>"
                                                                    required
                                                                    class="vote-radio">
@@ -704,7 +851,7 @@ try {
 
                 <?php if (!empty($usg_elections) || !empty($lsg_elections)): ?>
                     <div class="text-center mt-4">
-                        <button type="submit" class="btn btn-primary btn-vote">
+                        <button type="submit" class="btn btn-primary btn-vote" id="submitVoteBtn">
                             <i class="fas fa-check-circle mr-2"></i> Submit Votes
                         </button>
                     </div>
@@ -714,13 +861,34 @@ try {
     </div>
 </div>
 
-<!-- jQuery and Bootstrap JS -->
-<script src="../plugins/jquery/jquery.min.js"></script>
-<script src="../plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-<!-- AdminLTE App -->
-<script src="../dist/js/adminlte.min.js"></script>
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Toastr JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
 <script>
     $(document).ready(function() {
+        // Initialize Toastr
+        toastr.options = {
+            "closeButton": true,
+            "debug": false,
+            "newestOnTop": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "preventDuplicates": false,
+            "onclick": null,
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": "5000",
+            "extendedTimeOut": "1000",
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut"
+        };
+
         // Highlight selected candidate for radio buttons
         $('input[type="radio"]').change(function() {
             $(this).closest('.candidate-card').addClass('candidate-selected')
@@ -737,7 +905,7 @@ try {
                 const maxSelected = parseInt($(this).data('max-selected'));
                 const electionId = card.data('election');
                 const positionId = card.data('position');
-                const selector = `input[name="vote[${electionId}][${positionId}][]"]:checked`;
+                const selector = `input[name="votes[${electionId}][${positionId}][]"]:checked`;
                 const currentlySelected = $(selector).length;
 
                 if (currentlySelected > maxSelected) {
@@ -766,7 +934,7 @@ try {
                 // Update counters for remaining selected cards
                 const electionId = card.data('election');
                 const positionId = card.data('position');
-                const selector = `input[name="vote[${electionId}][${positionId}][]"]:checked`;
+                const selector = `input[name="votes[${electionId}][${positionId}][]"]:checked`;
                 const selectedCards = $(selector).closest('.candidate-card');
 
                 selectedCards.each(function(index) {
@@ -790,8 +958,11 @@ try {
             }
         });
 
-        // Form submission handling
+        // Form submission handling with AJAX
         $('#votingForm').on('submit', function(e) {
+            e.preventDefault();
+            const form = $(this);
+            const submitBtn = $('#submitVoteBtn');
             let formValid = true;
 
             // Check radio button selections
@@ -802,9 +973,13 @@ try {
                     const name = inputs.first().attr('name');
                     if (!$('input[name="' + name + '"]:checked').length) {
                         formValid = false;
+                        toastr.error('Please make a selection for all positions before submitting.');
+                        return false; // exit the each loop
                     }
                 }
             });
+
+            if (!formValid) return;
 
             // Check checkbox selections
             $('.position-section').each(function() {
@@ -817,16 +992,48 @@ try {
 
                     if ($('input[name="' + name + '"]:checked').length < minRequired) {
                         formValid = false;
+                        toastr.error('Please make a selection for all positions before submitting.');
+                        return false; // exit the each loop
                     }
                 }
             });
 
-            if (!formValid) {
-                e.preventDefault();
-                alert('Please make selections for all positions before submitting.');
-            }
+            if (!formValid) return;
+
+            // Disable submit button to prevent multiple submissions
+            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+
+            // Send AJAX request
+            $.ajax({
+                url: 'process_vote.php',
+                type: 'POST',
+                data: form.serialize(),
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                        setTimeout(function() {
+                            window.location.href = response.redirect || 'elections.php';
+                        }, 1500);
+                    } else {
+                        toastr.error(response.message || 'An error occurred while processing your vote.');
+                        submitBtn.prop('disabled', false).html('<i class="fas fa-check-circle mr-2"></i> Submit Votes');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("AJAX Error:", {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        responseText: xhr.responseText,
+                        error: error
+                    });
+                    toastr.error('Vote submission failed. Check console for details.');
+                    submitBtn.prop('disabled', false).html('<i class="fas fa-check-circle mr-2"></i> Submit Votes');
+                }
+            });
         });
     });
 </script>
+<script src="../js/logout.js"></script>
 </body>
 </html>
