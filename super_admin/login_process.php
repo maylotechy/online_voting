@@ -106,9 +106,9 @@ try {
 
     // Determine redirect based on role
     $redirect = match((int)$row['role_id']) {
-        1 => 'super_admin/dashboard.php', // Super admin
-        2 => 'college_admin/dashboard.php', // College admin
-        default => 'login.php' // Shouldn't happen due to query filter
+        1 => '../super_admin/dashboard.php', // Super admin
+        2 => '../admin/adminDashboard.php', // College admin
+        default => 'login.php'
     };
 
     echo json_encode([

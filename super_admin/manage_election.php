@@ -1,5 +1,6 @@
 <?php
 require '../config/db.php';
+include "../middleware/auth_admin.php";
 $pdo = $GLOBALS['pdo'];
 
 $election_id = $_GET['id'] ?? null;

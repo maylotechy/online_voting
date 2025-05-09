@@ -1,6 +1,7 @@
 <?php
 global $pdo;
 require '../config/db.php';
+require_once "../middleware/auth_student.php";
 session_start();
 
 // Check student authentication
