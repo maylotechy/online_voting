@@ -1,5 +1,7 @@
 <?php
+
 session_start();
+require_once "../middleware/auth_student.php";
 
 // If already agreed to terms, redirect to elections
 if (isset($_SESSION['terms_accepted'])) {

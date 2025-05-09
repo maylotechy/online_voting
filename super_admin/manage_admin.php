@@ -2,6 +2,7 @@
 global $pdo;
 session_start();
 require '../config/db.php';
+include "../middleware/auth_admin.php";
 
 // Check if user is logged in and is super admin (role_id = 1)
 if (!isset($_SESSION['admin_id']) || $_SESSION['role_id'] != 1) {
@@ -442,7 +443,7 @@ if (isset($_GET['success'])) {
                             <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i> Profile</a></li>
                             <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" onclick="Logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                            <li><a class="dropdown-item" href="../super_admin/logout.php" onclick="Logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
                         </ul>
                     </div>
                 </div>

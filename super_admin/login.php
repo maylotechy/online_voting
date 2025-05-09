@@ -192,45 +192,54 @@
     };
 
     // Handle form submission
-    $('#loginForm').submit(function(e) {
-        e.preventDefault();
+$('#loginForm').submit(function(e) {
+    e.preventDefault();
 
-        // Show loading state
-        const btn = $(this).find('button[type="submit"]');
-        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Authenticating...');
+    // Show loading state
+    const btn = $(this).find('button[type="submit"]');
+    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Authenticating...');
 
-        // Submit via AJAX
-        $.ajax({
-            type: 'POST',
-            url: 'login_process.php',
-            data: $(this).serialize(),
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    toastr.success(response.message);
+    // Submit via AJAX
+    $.ajax({
+        type: 'POST',
+        url: 'login_process.php',
+        data: $(this).serialize(),
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                toastr.success(response.message);
+                // Redirect based on role_id
+                if (response.role_id === 2) {
+                    // College admin (role_id = 2)
+                    setTimeout(() => {
+                        window.location.href = "../admin/adminDashboard.php";
+                    }, 1500);
+                } else {
+                    // Default redirect (super admin)
                     setTimeout(() => {
                         window.location.href = "dashboard.php";
                     }, 1500);
-                } else {
-                    toastr.error(response.message);
-                    // Reset Turnstile if available
-                    if (typeof turnstile !== 'undefined') {
-                        turnstile.reset();
-                    }
                 }
-                btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Sign In');
-            },
-            error: function(xhr) {
-                toastr.error(xhr.responseJSON?.message || 'Connection error. Please try again.');
-                btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Sign In');
-
+            } else {
+                toastr.error(response.message);
                 // Reset Turnstile if available
                 if (typeof turnstile !== 'undefined') {
                     turnstile.reset();
                 }
             }
-        });
+            btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Sign In');
+        },
+        error: function(xhr) {
+            toastr.error(xhr.responseJSON?.message || 'Connection error. Please try again.');
+            btn.prop('disabled', false).html('<i class="fas fa-sign-in-alt mr-2"></i> Sign In');
+
+            // Reset Turnstile if available
+            if (typeof turnstile !== 'undefined') {
+                turnstile.reset();
+            }
+        }
     });
+});
 </script>
 </body>
 </html>

@@ -1,12 +1,16 @@
 <?php
+require '../auth_session/auth_check_collegeadmin.php';
 require "../config/db.php";
+require_once "../middleware/auth_collegeadmin.php";
+
 $pdo = $GLOBALS['pdo'];
+$college_id = $_SESSION['college_id']; // Get admin's college_id from session
 
 // Get filter values from query string
 $votedFilter = isset($_GET['voted']) ? $_GET['voted'] : '';
 $yearLevelFilter = isset($_GET['year_level']) ? $_GET['year_level'] : '';
 
-// Base query
+// Base query with college filter
 $sql = "
     SELECT 
         s.student_id,
@@ -25,24 +29,21 @@ $sql = "
         colleges c ON s.college_id = c.id
     JOIN 
         courses cr ON s.course_id = cr.id
+    WHERE
+        s.college_id = :college_id
 ";
 
-// Add filters to query
-$whereClauses = [];
-$params = [];
+$params = [':college_id' => $college_id];
 
+// Add additional filters to query
 if ($votedFilter !== '') {
-    $whereClauses[] = "s.has_voted = :has_voted";
+    $sql .= " AND s.has_voted = :has_voted";
     $params[':has_voted'] = ($votedFilter === 'yes') ? 1 : 0;
 }
 
 if ($yearLevelFilter !== '') {
-    $whereClauses[] = "s.year_level = :year_level";
+    $sql .= " AND s.year_level = :year_level";
     $params[':year_level'] = $yearLevelFilter;
-}
-
-if (!empty($whereClauses)) {
-    $sql .= " WHERE " . implode(" AND ", $whereClauses);
 }
 
 $sql .= " ORDER BY s.last_name, s.first_name";
@@ -67,37 +68,30 @@ $currentPage = max(1, min($currentPage, $totalPages));
 $startIndex = ($currentPage - 1) * $itemsPerPage;
 $paginatedStudents = array_slice($students, $startIndex, $itemsPerPage);
 
-// Query for Total Students
-$sqlStudents = "SELECT COUNT(*) AS total_students FROM students";
+// Query for Total Students in this college
+$sqlStudents = "SELECT COUNT(*) AS total_students FROM students WHERE college_id = :college_id";
 $stmtStudents = $pdo->prepare($sqlStudents);
-$stmtStudents->execute();
+$stmtStudents->execute([':college_id' => $college_id]);
 $totalStudents = $stmtStudents->fetch(PDO::FETCH_ASSOC)['total_students'];
 
-// Query for Total Admins
-$sqlAdmins = "SELECT COUNT(*) AS total_admins FROM admins WHERE role_id = 2";
+// Query for Total Admins in this college
+$sqlAdmins = "SELECT COUNT(*) AS total_admins FROM admins WHERE role_id = 2 AND college_id = :college_id";
 $stmtAdmins = $pdo->prepare($sqlAdmins);
-$stmtAdmins->execute();
+$stmtAdmins->execute([':college_id' => $college_id]);
 $totalAdmins = $stmtAdmins->fetch(PDO::FETCH_ASSOC)['total_admins'];
 
-// Query for Total Colleges
-$sqlColleges = "SELECT COUNT(*) AS total_colleges FROM colleges";
-$stmtColleges = $pdo->prepare($sqlColleges);
-$stmtColleges->execute();
-$totalColleges = $stmtColleges->fetch(PDO::FETCH_ASSOC)['total_colleges'];
-
-// Query for Total Courses
-$sqlCourses = "SELECT COUNT(*) AS total_courses FROM courses";
-$stmtCourses = $pdo->prepare($sqlCourses);
-$stmtCourses->execute();
-$totalCourses = $stmtCourses->fetch(PDO::FETCH_ASSOC)['total_courses'];
-
-// Query for voting statistics
-$sqlVoted = "SELECT COUNT(*) AS voted FROM students WHERE has_voted = 1";
+// Query for voting statistics in this college
+$sqlVoted = "SELECT COUNT(*) AS voted FROM students WHERE has_voted = 1 AND college_id = :college_id";
 $stmtVoted = $pdo->prepare($sqlVoted);
-$stmtVoted->execute();
+$stmtVoted->execute([':college_id' => $college_id]);
 $votedStudents = $stmtVoted->fetch(PDO::FETCH_ASSOC)['voted'];
 
 $voterTurnout = ($totalStudents > 0) ? round(($votedStudents / $totalStudents) * 100, 2) : 0;
+
+// Note: Removed total colleges and total courses queries as they're not college-specific
+// If needed, you could add filtered versions like:
+// $sqlColleges = "SELECT COUNT(*) AS total_colleges FROM colleges WHERE id = :college_id";
+// But this would always return 1 for college admins
 ?>
 
 <!DOCTYPE html>
@@ -390,15 +384,9 @@ $voterTurnout = ($totalStudents > 0) ? round(($votedStudents / $totalStudents) *
         </div>
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a class="nav-link" href="dashboard.php">
+                <a class="nav-link" href="adminDashboard.php">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="manage_admin.php">
-                    <i class="fas fa-user-shield"></i>
-                    <span>College Admins</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -413,24 +401,7 @@ $voterTurnout = ($totalStudents > 0) ? round(($votedStudents / $totalStudents) *
                     <span>Students</span>
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="create_elections.php">
-                    <i class="fas fa-rocket"></i>
-                    <span>Launch Election</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="results.php">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Election Results</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="election_history.php">
-                    <i class="fas fa-history"></i>
-                    <span>Election History</span>
-                </a>
-            </li>
+        
 
         </ul>
     </div>
@@ -439,27 +410,69 @@ $voterTurnout = ($totalStudents > 0) ? round(($votedStudents / $totalStudents) *
     <!-- Main Content -->
     <div class="content-wrapper col">
         <!-- Navbar -->
-        <nav class="navbar navbar-expand-lg navbar-light bg-white rounded-3 mb-4">
-            <div class="container-fluid">
-                <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
+        <?php
+// Define college names with their specific file extensions
+$collegeLogos = [
+    1 => ['name' => 'CA', 'ext' => 'png'],
+    2 => ['name' => 'CASS', 'ext' => 'png'],
+    3 => ['name' => 'CBDEM', 'ext' => 'jpeg'],
+    4 => ['name' => 'CED', 'ext' => 'jpeg'],
+    5 => ['name' => 'CEIT', 'ext' => 'png'],
+    6 => ['name' => 'CHS', 'ext' => 'jpeg'],
+    7 => ['name' => 'CHEFS', 'ext' => 'jpeg'],
+    8 => ['name' => 'MED', 'ext' => 'png'],
+    9 => ['name' => 'CSM', 'ext' => 'png'],
+    10 => ['name' => 'CVM', 'ext' => 'jpeg'],
+    11 => ['name' => 'CTI', 'ext' => 'png'],
+    12 => ['name' => 'Grad School', 'ext' => 'png'],
+    13 => ['name' => 'IMEAS', 'ext' => 'jpeg'],
+    14 => ['name' => 'ISPEAR', 'ext' => 'jpeg']
+];
+
+// Default values
+$collegeText = 'USM Comelec';
+$collegeLogo = '../asssets/college_logo/CA.png';
+
+
+if (isset($_SESSION['role_id'])) {
+    if ($_SESSION['role_id'] == 2 && isset($_SESSION['college_id'])) {
+        $collegeId = $_SESSION['college_id'];
+        
+        if (isset($collegeLogos[$collegeId])) {
+            $collegeData = $collegeLogos[$collegeId];
+            $collegeText = $collegeData['name'] . ' Comelec';
+            $collegeLogoPath = '../asssets/college_logo/' . $collegeData['name'] . '.' . $collegeData['ext'];
+            
+            if (file_exists($collegeLogoPath)) {
+                $collegeLogo = $collegeLogoPath;
+            }
+        }
+    }
+}
+?>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-white rounded-3 mb-4">
+    <div class="container-fluid">
+        <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="ms-auto">
+            <div class="dropdown">
+                <button class="btn user-dropdown dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <img src="<?php echo $collegeLogo; ?>" alt="Logo" width="32" height="32"
+                         onerror="this.onerror=null; this.src='../assets/college_logo/USM_Comelec.png';">
+                    <span><?php echo htmlspecialchars($collegeText); ?></span>
                 </button>
-                <div class="ms-auto">
-                    <div class="dropdown">
-                        <button class="btn user-dropdown dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="../asssets/super_admin/usm_comelec.jpg" alt="Admin" width="32" height="32">
-                            <span>USM Comelec</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i> Profile</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="../super_admin/logout.php" onclick="Logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
-                        </ul>
-                    </div>
-                </div>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i> Profile</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="../super_admin/logout.php" onclick="Logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                </ul>
             </div>
-        </nav>
+        </div>
+    </div>
+</nav>
 
         <!-- Page Content -->
         <div class="container-fluid">
@@ -653,17 +666,18 @@ $voterTurnout = ($totalStudents > 0) ? round(($votedStudents / $totalStudents) *
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="college_id" class="form-label">College</label>
-                                <select class="form-select" id="college_id" name="college_id" required>
-                                    <option value="">Select College</option>
-                                    <?php
-                                    $colleges = $pdo->query("SELECT id, college_name FROM colleges")->fetchAll(PDO::FETCH_ASSOC);
-                                    foreach ($colleges as $college): ?>
-                                        <option value="<?= $college['id'] ?>"><?= htmlspecialchars($college['college_name']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
+                        <?php
+                        $college_id = $_SESSION['college_id'];
+                        $college = $pdo->prepare("SELECT college_name FROM colleges WHERE id = ?");
+                        $college->execute([$college_id]);
+                        $college_name = $college->fetchColumn();
+                        ?>
+                        <div class="mb-3">
+                            <label class="form-label">College</label>
+                            <input type="text" class="form-control" value="<?= htmlspecialchars($college_name) ?>" disabled>
+                            <input type="hidden" id="college_id" name="college_id" value="<?= $college_id ?>">
+                        </div>
+
                             <div class="mb-3">
                                 <label for="course_id" class="form-label">Course</label>
                                 <select class="form-select" id="course_id" name="course_id" required>
@@ -698,6 +712,7 @@ $voterTurnout = ($totalStudents > 0) ? round(($votedStudents / $totalStudents) *
 </div>
 
 <!-- Edit Student Modal -->
+<!-- Edit Student Modal -->
 <div class="modal fade" id="editStudentModal" tabindex="-1" aria-labelledby="editStudentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -729,18 +744,22 @@ $voterTurnout = ($totalStudents > 0) ? round(($votedStudents / $totalStudents) *
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="edit_college_id" class="form-label">College</label>
-                                <select class="form-select" id="edit_college_id" name="college_id" required>
-                                    <option value="">Select College</option>
-                                    <?php foreach ($colleges as $college): ?>
-                                        <option value="<?= $college['id'] ?>"><?= htmlspecialchars($college['college_name']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                                <label class="form-label">College</label>
+                                <input type="text" class="form-control" value="<?= htmlspecialchars($college_name) ?>" disabled>
+                                <input type="hidden" id="edit_college_id" name="college_id" value="<?= $college_id ?>">
                             </div>
                             <div class="mb-3">
                                 <label for="edit_course_id" class="form-label">Course</label>
                                 <select class="form-select" id="edit_course_id" name="course_id" required>
                                     <option value="">Select Course</option>
+                                    <?php 
+                                    // Get courses for this college
+                                    $courses = $pdo->prepare("SELECT id, name FROM courses WHERE college_id = ?");
+                                    $courses->execute([$college_id]);
+                                    while ($course = $courses->fetch(PDO::FETCH_ASSOC)) {
+                                        echo '<option value="'.$course['id'].'">'.htmlspecialchars($course['name']).'</option>';
+                                    }
+                                    ?>
                                 </select>
                             </div>
                             <div class="mb-3">
@@ -799,13 +818,12 @@ $voterTurnout = ($totalStudents > 0) ? round(($votedStudents / $totalStudents) *
 <script>
     $(document).ready(function() {
         // Load courses based on selected college
-        $('#college_id, #edit_college_id').change(function() {
-            const collegeId = $(this).val();
-            const targetSelect = $(this).attr('id') === 'college_id' ? '#course_id' : '#edit_course_id';
-
-            $(targetSelect).html('<option value="">Loading courses...</option>');
+        $('#addStudentModal').on('shown.bs.modal', function () {
+            const collegeId = $('#college_id').val();
 
             if (collegeId) {
+                $('#course_id').html('<option value="">Loading courses...</option>');
+
                 $.ajax({
                     url: 'get_courses.php',
                     type: 'GET',
@@ -815,16 +833,15 @@ $voterTurnout = ($totalStudents > 0) ? round(($votedStudents / $totalStudents) *
                         response.forEach(course => {
                             options += `<option value="${course.id}">${course.name}</option>`;
                         });
-                        $(targetSelect).html(options);
+                        $('#course_id').html(options);
                     },
                     error: function() {
-                        $(targetSelect).html('<option value="">Failed to load courses</option>');
+                        $('#course_id').html('<option value="">Failed to load courses</option>');
                     }
                 });
-            } else {
-                $(targetSelect).html('<option value="">Select Course</option>');
             }
         });
+
 
         // Add Student Form Submission
         $('#addStudentForm').submit(function(e) {
@@ -857,41 +874,37 @@ $voterTurnout = ($totalStudents > 0) ? round(($votedStudents / $totalStudents) *
         });
 
         // Edit Student Button Click
-        $('.edit-btn').click(function() {
-            const studentId = $(this).data('id');
+        // Edit Student Button Click
+$('.edit-btn').click(function() {
+    const studentId = $(this).data('id');
 
-            $.ajax({
-                url: 'get_student.php',
-                type: 'GET',
-                data: { student_id: studentId },
-                dataType: 'json',
-                success: function(response){
-                    if (response.success) {
-                        const student = response.data;
-                        $('#edit_student_id').val(student.student_id);
-                        $('#original_student_id').val(student.student_id);
-                        $('#edit_first_name').val(student.first_name);
-                        $('#edit_last_name').val(student.last_name);
-                        $('#edit_email').val(student.email);
-                        $('#edit_college_id').val(student.college_id).trigger('change');
-                        $('#edit_year_level').val(student.year_level);
-                        $('#edit_cor_number').val(student.cor_number);
-
-                        // Set course after college courses are loaded
-                        setTimeout(() => {
-                            $('#edit_course_id').val(student.course_id);
-                        }, 500);
-
-                        $('#editStudentModal').modal('show');
-                    } else {
-                        toastr.error(response.message);
-                    }
-                },
-                error: function() {
-                    toastr.error('Failed to load student data');
-                }
-            });
-        });
+    $.ajax({
+        url: 'get_student.php',
+        type: 'GET',
+        data: { student_id: studentId },
+        dataType: 'json',
+        success: function(response){
+            if (response.success) {
+                const student = response.data;
+                $('#edit_student_id').val(student.student_id);
+                $('#original_student_id').val(student.student_id);
+                $('#edit_first_name').val(student.first_name);
+                $('#edit_last_name').val(student.last_name);
+                $('#edit_email').val(student.email);
+                $('#edit_year_level').val(student.year_level);
+                $('#edit_cor_number').val(student.cor_number);
+                $('#edit_course_id').val(student.course_id);
+                
+                $('#editStudentModal').modal('show');
+            } else {
+                toastr.error(response.message);
+            }
+        },
+        error: function() {
+            toastr.error('Failed to load student data');
+        }
+    });
+});
 
         // Edit Student Form Submission
         $('#editStudentForm').submit(function(e) {
@@ -1028,3 +1041,4 @@ $voterTurnout = ($totalStudents > 0) ? round(($votedStudents / $totalStudents) *
 <script src="/plugins/sweet-alert/sweetalert.js"></script>
 <script src="/js/logout.js"></script>
 </body>
+

@@ -1,34 +1,24 @@
 <?php
 require "../config/db.php";
-// Check if user is logged in and is super admin (role_id = 1)
-include "../auth_session/auth_check_admin.php";
-$pdo = $GLOBALS['pdo'];
+require '../auth_session/auth_check_collegeadmin.php';
+require_once "../middleware/auth_collegeadmin.php";
 
-// Query for Total Students
-$sqlStudents = "SELECT COUNT(*) AS total_students FROM students";
+$pdo = $GLOBALS['pdo'];
+$college_id = $_SESSION['college_id'];
+
+// Query for Total Students in this college
+$sqlStudents = "SELECT COUNT(*) AS total_students FROM students WHERE college_id = ?";
 $stmtStudents = $pdo->prepare($sqlStudents);
-$stmtStudents->execute();
+$stmtStudents->execute([$college_id]);
 $totalStudents = $stmtStudents->fetch(PDO::FETCH_ASSOC)['total_students'];
 
-// Query for Total Admins
-$sqlAdmins = "SELECT COUNT(*) AS total_admins FROM admins WHERE role_id = 2";
-$stmtAdmins = $pdo->prepare($sqlAdmins);
-$stmtAdmins->execute();
-$totalAdmins = $stmtAdmins->fetch(PDO::FETCH_ASSOC)['total_admins'];
-
-// Query for Total Colleges
-$sqlColleges = "SELECT COUNT(*) AS total_colleges FROM colleges";
-$stmtColleges = $pdo->prepare($sqlColleges);
-$stmtColleges->execute();
-$totalColleges = $stmtColleges->fetch(PDO::FETCH_ASSOC)['total_colleges'];
-
-// Query for Total Courses
-$sqlCourses = "SELECT COUNT(*) AS total_courses FROM courses";
+// Query for Total Courses in this college
+$sqlCourses = "SELECT COUNT(*) AS total_courses FROM courses WHERE college_id = ?";
 $stmtCourses = $pdo->prepare($sqlCourses);
-$stmtCourses->execute();
+$stmtCourses->execute([$college_id]);
 $totalCourses = $stmtCourses->fetch(PDO::FETCH_ASSOC)['total_courses'];
 
-// Query to get students per course per year level
+// Query to get students per course per year level for this college
 $sql = "
     SELECT 
         c.name AS course_name,
@@ -38,6 +28,8 @@ $sql = "
         courses c
     LEFT JOIN 
         students s ON s.course_id = c.id
+    WHERE 
+        c.college_id = ?
     GROUP BY 
         c.name, s.year_level
     ORDER BY 
@@ -45,7 +37,7 @@ $sql = "
 ";
 
 $stmt = $pdo->prepare($sql);
-$stmt->execute();
+$stmt->execute([$college_id]);
 
 // Fetch the data
 $studentCounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -71,19 +63,12 @@ foreach ($studentCounts as $row) {
     $organizedData[$course][$year_level] = $total_students;
 }
 
-// 1. Get total positions
-$totalPositions = $pdo->query("SELECT COUNT(*) FROM positions")->fetchColumn();
+// Get number of students who have voted in this college
+$votedVoters = $pdo->prepare("SELECT COUNT(*) FROM students WHERE has_voted = 1 AND college_id = ?");
+$votedVoters->execute([$college_id]);
+$votedVoters = $votedVoters->fetchColumn();
 
-// 2. Get total candidates
-$totalCandidates = $pdo->query("SELECT COUNT(*) FROM candidates")->fetchColumn();
-
-// 3. Get total students (eligible voters)
-$totalStudents = $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
-
-// 4. Get number of students who have voted
-$votedVoters = $pdo->query("SELECT COUNT(*) FROM students WHERE has_voted = 1")->fetchColumn();
-
-// 5. Calculate voter turnout percentage
+// Calculate voter turnout percentage for this college
 $voterTurnout = $totalStudents > 0 ? round(($votedVoters / $totalStudents) * 100, 2) : 0;
 
 // Pagination variables
@@ -99,12 +84,11 @@ $currentPage = max(1, min($currentPage, $totalPages));
 $startIndex = ($currentPage - 1) * $itemsPerPage;
 $paginatedData = array_slice($organizedData, $startIndex, $itemsPerPage, true);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Super Admin Dashboard</title>
+    <title>College Admin Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -351,19 +335,13 @@ $paginatedData = array_slice($organizedData, $startIndex, $itemsPerPage, true);
         </div>
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a class="nav-link active" href="dashboard.php">
+                <a class="nav-link active" href="adminDashboard.php">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="manage_admin.php">
-                    <i class="fas fa-user-shield"></i>
-                    <span>College Admins</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="manage_candidates.php">
+                <a class="nav-link " href="manage_candidates.php">
                     <i class="fas fa-users"></i>
                     <span>Candidates</span>
                 </a>
@@ -374,25 +352,6 @@ $paginatedData = array_slice($organizedData, $startIndex, $itemsPerPage, true);
                     <span>Students</span>
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="create_elections.php">
-                    <i class="fas fa-rocket"></i>
-                    <span>Launch Election</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="results.php">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Election Results</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="election_history.php">
-                    <i class="fas fa-history"></i>
-                    <span>Election History</span>
-                </a>
-            </li>
-
         </ul>
     </div>
 
@@ -400,74 +359,104 @@ $paginatedData = array_slice($organizedData, $startIndex, $itemsPerPage, true);
     <!-- Main Content -->
     <div class="content-wrapper col">
         <!-- Navbar -->
-        <nav class="navbar navbar-expand-lg navbar-light bg-white rounded-3 mb-4">
-            <div class="container-fluid">
-                <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
+        <?php
+// Define college names with their specific file extensions
+$collegeLogos = [
+    1 => ['name' => 'CA', 'ext' => 'png'],
+    2 => ['name' => 'CASS', 'ext' => 'png'],
+    3 => ['name' => 'CBDEM', 'ext' => 'jpeg'],
+    4 => ['name' => 'CED', 'ext' => 'jpeg'],
+    5 => ['name' => 'CEIT', 'ext' => 'png'],
+    6 => ['name' => 'CHS', 'ext' => 'jpeg'],
+    7 => ['name' => 'CHEFS', 'ext' => 'jpeg'],
+    8 => ['name' => 'MED', 'ext' => 'png'],
+    9 => ['name' => 'CSM', 'ext' => 'png'],
+    10 => ['name' => 'CVM', 'ext' => 'jpeg'],
+    11 => ['name' => 'CTI', 'ext' => 'png'],
+    12 => ['name' => 'Grad School', 'ext' => 'png'],
+    13 => ['name' => 'IMEAS', 'ext' => 'jpeg'],
+    14 => ['name' => 'ISPEAR', 'ext' => 'jpeg']
+];
+
+// Default values
+$collegeText = 'USM Comelec';
+$collegeLogo = '../asssets/college_logo/CA.png';
+
+
+if (isset($_SESSION['role_id'])) {
+    if ($_SESSION['role_id'] == 2 && isset($_SESSION['college_id'])) {
+        $collegeId = $_SESSION['college_id'];
+        
+        if (isset($collegeLogos[$collegeId])) {
+            $collegeData = $collegeLogos[$collegeId];
+            $collegeText = $collegeData['name'] . ' Comelec';
+            $collegeLogoPath = '../asssets/college_logo/' . $collegeData['name'] . '.' . $collegeData['ext'];
+            
+            if (file_exists($collegeLogoPath)) {
+                $collegeLogo = $collegeLogoPath;
+            }
+        }
+    }
+}
+?>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-white rounded-3 mb-4">
+    <div class="container-fluid">
+        <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="ms-auto">
+            <div class="dropdown">
+                <button class="btn user-dropdown dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <img src="<?php echo $collegeLogo; ?>" alt="Logo" width="32" height="32"
+                         onerror="this.onerror=null; this.src='../assets/college_logo/USM_Comelec.png';">
+                    <span><?php echo htmlspecialchars($collegeText); ?></span>
                 </button>
-                <div class="ms-auto">
-                    <div class="dropdown">
-                        <button class="btn user-dropdown dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="../asssets/super_admin/usm_comelec.jpg" alt="Admin" width="32" height="32">
-                            <span>USM Comelec</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i> Profile</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="../super_admin/logout.php" onclick="Logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
-                        </ul>
-                    </div>
-                </div>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i> Profile</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="../super_admin/logout.php" onclick="Logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                </ul>
             </div>
-        </nav>
+        </div>
+    </div>
+</nav>
+
 
         <!-- Page Content -->
         <div class="container-fluid">
-            <h2 class="mb-4">Super Admin Dashboard</h2>
+            <h2 class="mb-4">College Admin Dashboard</h2>
 
             <!-- Stats Cards -->
-            <div class="row">
-                <div class="col-md-3 col-sm-6">
-                    <a href="students.php" class="text-decoration-none">
-                        <div class="stats-card bg-students">
-                            <i class="fas fa-users"></i>
-                            <div class="count"><?= $totalStudents ?></div>
-                            <div class="label">Total Students</div>
-                        </div>
-                    </a>
-                </div>
-
-                <div class="col-md-3 col-sm-6">
-                    <a href="manage_admin.php" class="text-decoration-none">
+            <!-- Stats Cards -->
+                <div class="row">
+                    <div class="col-md-4 col-sm-6">
+                        <a href="students.php" class="text-decoration-none">
+                            <div class="stats-card bg-students">
+                                <i class="fas fa-users"></i>
+                                <div class="count"><?= $totalStudents ?></div>
+                                <div class="label">Total Students</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <a href="courses.php" class="text-decoration-none">
+                            <div class="stats-card bg-courses">
+                                <i class="fas fa-book"></i>
+                                <div class="count"><?= $totalCourses ?></div>
+                                <div class="label">Courses</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
                         <div class="stats-card bg-admins">
-                            <i class="fas fa-user-shield"></i>
-                            <div class="count"><?= $totalAdmins ?></div>
-                            <div class="label">College Admins</div>
+                            <i class="fas fa-vote-yea"></i>
+                            <div class="count"><?= $voterTurnout ?>%</div>
+                            <div class="label">Voter Turnout</div>
                         </div>
-                    </a>
+                    </div>
                 </div>
-
-                <div class="col-md-3 col-sm-6">
-                    <a href="colleges.php" class="text-decoration-none">
-                        <div class="stats-card bg-colleges">
-                            <i class="fas fa-university"></i>
-                            <div class="count"><?= $totalColleges ?></div>
-                            <div class="label">Colleges</div>
-                        </div>
-                    </a>
-                </div>
-
-                <div class="col-md-3 col-sm-6">
-                    <a href="courses.php" class="text-decoration-none">
-                        <div class="stats-card bg-courses">
-                            <i class="fas fa-book"></i>
-                            <div class="count"><?= $totalCourses ?></div>
-                            <div class="label">Courses</div>
-                        </div>
-                    </a>
-                </div>
-            </div>
 
             <!-- Students per Course and Year -->
             <div class="card mt-4">
@@ -576,65 +565,65 @@ $paginatedData = array_slice($organizedData, $startIndex, $itemsPerPage, true);
     });
 
     // Charts
-    document.addEventListener('DOMContentLoaded', function() {
-        // Pie Chart
-        const ctxPie = document.getElementById('electionPieChart').getContext('2d');
-        const electionPieChart = new Chart(ctxPie, {
-            type: 'pie',
-            data: {
-                labels: ['Total Positions', 'Total Candidates', 'Voter Turnout (%)'],
-                datasets: [{
-                    data: [<?= $totalPositions ?>, <?= $totalCandidates ?>, <?= $voterTurnout ?>],
-                    backgroundColor: ['#4361ee', '#7209b7', '#4cc9f0'],
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                    },
-                    title: {
-                        display: true,
-                        text: 'Election Statistics (Pie Chart)'
-                    }
-                }
-            }
-        });
-
-        // Bar Chart
-        const ctxBar = document.getElementById('electionBarChart').getContext('2d');
-        const electionBarChart = new Chart(ctxBar, {
-            type: 'bar',
-            data: {
-                labels: ['Total Positions', 'Total Candidates', 'Voter Turnout (%)'],
-                datasets: [{
-                    label: 'Count',
-                    data: [<?= $totalPositions ?>, <?= $totalCandidates ?>, <?= $voterTurnout ?>],
-                    backgroundColor: ['#4361ee', '#7209b7', '#4cc9f0'],
-                    borderColor: ['#3a0ca3', '#560bad', '#4895ef'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    title: {
-                        display: true,
-                        text: 'Election Statistics (Bar Chart)'
-                    }
+document.addEventListener('DOMContentLoaded', function() {
+    // Pie Chart
+    const ctxPie = document.getElementById('electionPieChart').getContext('2d');
+    const electionPieChart = new Chart(ctxPie, {
+        type: 'pie',
+        data: {
+            labels: ['Total Students', 'Voted Students', 'Voter Turnout (%)'],
+            datasets: [{
+                data: [<?= $totalStudents ?>, <?= $votedVoters ?>, <?= $voterTurnout ?>],
+                backgroundColor: ['#4361ee', '#4cc9f0', '#7209b7'],
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
+                title: {
+                    display: true,
+                    text: 'Voting Statistics'
                 }
             }
-        });
+        }
     });
+
+    // Bar Chart
+    const ctxBar = document.getElementById('electionBarChart').getContext('2d');
+    const electionBarChart = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+            labels: ['Total Students', 'Voted Students', 'Voter Turnout (%)'],
+            datasets: [{
+                label: 'Count',
+                data: [<?= $totalStudents ?>, <?= $votedVoters ?>, <?= $voterTurnout ?>],
+                backgroundColor: ['#4361ee', '#4cc9f0', '#7209b7'],
+                borderColor: ['#3a0ca3', '#4895ef', '#560bad'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'Voting Statistics'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
 </script>
 <script src="/plugins/sweet-alert/sweetalert.js"></script>
 <script src="/js/logout.js"></script>

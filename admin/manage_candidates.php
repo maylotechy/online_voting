@@ -1,16 +1,10 @@
 <?php
 global $pdo;
-
-session_start();
-
+require '../auth_session/auth_check_collegeadmin.php';
 require '../config/db.php';
-
-
-// Check if user is logged in and is super admin (role_id = 1)
-if (!isset($_SESSION['admin_id']) || $_SESSION['role_id'] != 1) {
-    header('Location: login.php');
-    exit();
-}
+require_once "../middleware/auth_collegeadmin.php";
+// Get college_id from session
+$college_id = $_SESSION['college_id'];
 
 // Display toastr notification if set
 if (!empty($_SESSION['toastr']) && is_array($_SESSION['toastr'])) {
@@ -25,19 +19,22 @@ if (!empty($_SESSION['toastr']) && is_array($_SESSION['toastr'])) {
     $alert = '';
 }
 
-// Database functions (unchanged)
-function getColleges($pdo) {
-    $stmt = $pdo->query("SELECT id, college_name AS c_name, code FROM colleges");
+// Database functions (updated to filter by college_id)
+function getColleges($pdo, $college_id) {
+    $stmt = $pdo->prepare("SELECT id, college_name AS c_name, code FROM colleges WHERE id = ?");
+    $stmt->execute([$college_id]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 function getPositions($pdo) {
-    $stmt = $pdo->query("SELECT id, name FROM positions");
+    $stmt = $pdo->prepare("SELECT id, name FROM positions WHERE scope = 'college'");
+    $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-function getCandidates($pdo) {
-    $stmt = $pdo->query("
+
+function getCandidates($pdo, $college_id) {
+    $stmt = $pdo->prepare("
         SELECT 
             c.id AS candidate_id,
             c.student_id,
@@ -64,17 +61,20 @@ function getCandidates($pdo) {
             courses crs ON s.course_id = crs.id
         JOIN 
             positions pos ON c.position_id = pos.id
+        WHERE 
+            s.college_id = :college_id
         ORDER BY 
             s.last_name, s.first_name;
     ");
+    $stmt->execute([':college_id' => $college_id]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// Get data (unchanged)
+// Get data (filtered by college_id)
 try {
-    $colleges = getColleges($pdo);
-    $positions = getPositions($pdo);
-    $candidates = getCandidates($pdo);
+    $colleges = getColleges($pdo, $college_id);
+    $positions = getPositions($pdo, $college_id);
+    $candidates = getCandidates($pdo, $college_id);
 
     // Calculate candidate counts
     $total_candidates = count($candidates);
@@ -403,15 +403,9 @@ try {
         </div>
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a class="nav-link" href="dashboard.php">
+                <a class="nav-link" href="adminDashboard.php">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="manage_admin.php">
-                    <i class="fas fa-user-shield"></i>
-                    <span>College Admins</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -426,24 +420,6 @@ try {
                     <span>Students</span>
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="create_elections.php">
-                    <i class="fas fa-rocket"></i>
-                    <span>Launch Election</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="results.php">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Election Results</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="election_history.php">
-                    <i class="fas fa-history"></i>
-                    <span>Election History</span>
-                </a>
-            </li>
 
         </ul>
     </div>
@@ -452,27 +428,69 @@ try {
     <!-- Main Content -->
     <div class="content-wrapper col">
         <!-- Navbar -->
-        <nav class="navbar navbar-expand-lg navbar-light bg-white rounded-3 mb-4">
-            <div class="container-fluid">
-                <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
+        <?php
+// Define college names with their specific file extensions
+$collegeLogos = [
+    1 => ['name' => 'CA', 'ext' => 'png'],
+    2 => ['name' => 'CASS', 'ext' => 'png'],
+    3 => ['name' => 'CBDEM', 'ext' => 'jpeg'],
+    4 => ['name' => 'CED', 'ext' => 'jpeg'],
+    5 => ['name' => 'CEIT', 'ext' => 'png'],
+    6 => ['name' => 'CHS', 'ext' => 'jpeg'],
+    7 => ['name' => 'CHEFS', 'ext' => 'jpeg'],
+    8 => ['name' => 'MED', 'ext' => 'png'],
+    9 => ['name' => 'CSM', 'ext' => 'png'],
+    10 => ['name' => 'CVM', 'ext' => 'jpeg'],
+    11 => ['name' => 'CTI', 'ext' => 'png'],
+    12 => ['name' => 'Grad School', 'ext' => 'png'],
+    13 => ['name' => 'IMEAS', 'ext' => 'jpeg'],
+    14 => ['name' => 'ISPEAR', 'ext' => 'jpeg']
+];
+
+// Default values
+$collegeText = 'USM Comelec';
+$collegeLogo = '../asssets/college_logo/CA.png';
+
+
+if (isset($_SESSION['role_id'])) {
+    if ($_SESSION['role_id'] == 2 && isset($_SESSION['college_id'])) {
+        $collegeId = $_SESSION['college_id'];
+        
+        if (isset($collegeLogos[$collegeId])) {
+            $collegeData = $collegeLogos[$collegeId];
+            $collegeText = $collegeData['name'] . ' Comelec';
+            $collegeLogoPath = '../asssets/college_logo/' . $collegeData['name'] . '.' . $collegeData['ext'];
+            
+            if (file_exists($collegeLogoPath)) {
+                $collegeLogo = $collegeLogoPath;
+            }
+        }
+    }
+}
+?>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-white rounded-3 mb-4">
+    <div class="container-fluid">
+        <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="ms-auto">
+            <div class="dropdown">
+                <button class="btn user-dropdown dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <img src="<?php echo $collegeLogo; ?>" alt="Logo" width="32" height="32"
+                         onerror="this.onerror=null; this.src='../assets/college_logo/USM_Comelec.png';">
+                    <span><?php echo htmlspecialchars($collegeText); ?></span>
                 </button>
-                <div class="ms-auto">
-                    <div class="dropdown">
-                        <button class="btn user-dropdown dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="../asssets/super_admin/usm_comelec.jpg" alt="Admin" width="32" height="32">
-                            <span>USM Comelec</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i> Profile</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="../super_admin/logout.php" onclick="Logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
-                        </ul>
-                    </div>
-                </div>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i> Profile</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="../super_admin/logout.php" onclick="Logout()"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                </ul>
             </div>
-        </nav>
+        </div>
+    </div>
+</nav>
 
         <!-- Page Content -->
         <div class="container-fluid">
