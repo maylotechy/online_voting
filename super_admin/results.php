@@ -1,5 +1,5 @@
 <?php
-require '../auth_session/auth_check_admin.php';
+require '../middleware/auth_admin.php';
 ?>
 
 <!DOCTYPE html>

@@ -1,15 +1,14 @@
 <?php
 // get_all_elections.php
-session_start();
+
 global $pdo;
 header('Content-Type: application/json');
+header('Content-Type: text/html; charset=UTF-8');
+
 require '../config/db.php';
+require_once '../middleware/auth_admin.php';
 try {
 
-    if (!isset($_SESSION['admin_id']) || $_SESSION['role_id'] != 1) {
-        header('Location: login.php');
-        exit();
-    }
 
     // Query to get all elections
     $stmt = $pdo->query("
